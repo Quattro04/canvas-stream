@@ -1,0 +1,24 @@
+#canv {
+    width: 900px;
+    height: 563px;
+    border:1px solid #000000;
+}
+#image {
+    height: 100%;
+    width: 100%;
+}
+.colors {
+    width: 16%;
+    height: 30px;
+}
+#sendButton {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+#play-button {
+    display: inline-block;
+    margin-right: 10px;
+}
+#audio-indicator {
+    display: inline-block;
+}
