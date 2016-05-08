@@ -32,6 +32,9 @@ router.use(express.static(path.resolve(__dirname, 'client')));
 var messages = [];
 var sockets = [];
 
+var recordNames = [];
+var records = [];
+
 var actions = [];
 
 var socketsReady = 0;
@@ -45,6 +48,11 @@ reader.onload = function(e) {
 }
 reader.readAsDataURL(new File('public/audio/greensleeves.mp3'));
 
+// Start time
+var startTime;
+
+// If audio is playing
+var playing = false;
 
 io.set('log level', 1);
 
@@ -55,6 +63,9 @@ io.on('connection', function (socket) {
     actions.forEach(function (data) {
       socket.emit('draw-response', data);
     });
+    if (playing) {
+      socket.emit('newUser-audio', { song : gsDataURL });
+    }
 
     sockets.push(socket);
 
@@ -87,9 +98,20 @@ io.on('connection', function (socket) {
     });
     
     socket.on('draw', function (data) {
-      socket.broadcast.emit('draw-response',data);
+      //var d = new Date();
+      //var t = d.getTime();
+      
+      //console.log((t-startTime-100) / 1000);
+      
+      socket.broadcast.emit('draw-response', data);
+      //io.sockets.emit('time',{ t : (t-startTime-100) / 1000 });
       actions.push(data);
     });
+    
+    socket.on('canvas-shot', function (data) {
+      socket.broadcast.emit('canvas-shot-response', data);
+    });
+    
     
     socket.on('play-request', function (data) {
       io.sockets.emit('play-response', { data : gsDataURL });
@@ -100,8 +122,39 @@ io.on('connection', function (socket) {
       if (socketsReady == sockets.length) {
         socketsReady = 0;
         io.sockets.emit('play-ready-response', { name : 'Greensleeves' });
+        
+        var d = new Date();
+        startTime = d.getTime();
+        
+        playing = true;
       }
+      
+      
+      
     });
+    
+    socket.on('newUser-audio-ready', function (data) {
+      var d = new Date();
+      var t = d.getTime();
+      socket.emit('newUser-audio-ready-response', { time : (t-startTime) / 1000 });
+    });
+    
+    socket.on('audio-ended', function (data) {
+      recordNames.push("Record 1");
+      records.push(actions);
+      actions = [];
+      playing = false;
+      startTime = 0;
+    });
+    
+    socket.on('get-record-names', function (data) {
+      socket.emit('record-names-response', { names : recordNames });
+    });
+    
+    socket.on('get-record', function (data) {
+      socket.emit('record-response', { record : records[data.id] });
+    });
+    
 });
 
 function updateRoster() {

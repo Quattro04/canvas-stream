@@ -1,7 +1,21 @@
 #canv {
     width: 900px;
     height: 563px;
-    border:1px solid #000000;
+    border: 1px solid #000000;
+    
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none;   /* Chrome/Safari/Opera */
+    -khtml-user-select: none;    /* Konqueror */
+    -moz-user-select: none;      /* Firefox */
+    -ms-user-select: none;       /* Internet Explorer/Edge */
+    user-select: none;           /* Non-prefixed version, currently
+                                      not supported by any browser */
+    
+}
+#recCanv {
+    width: 900px;
+    height: 563px;
+    border: 1px solid #000000;
 }
 #image {
     height: 100%;
@@ -15,10 +29,29 @@
     padding-top: 3px;
     padding-bottom: 3px;
 }
-#play-button {
-    display: inline-block;
+.play {
+    float: left;
+    margin-left: 15px;
     margin-right: 10px;
+    height: 30px;
+}
+#mute-button {
+    float: right;
+    margin-left: 15px;
+    margin-right: 10px;
+    height: 30px;
+}
+#progBar-div {
+    margin-bottom: 0px;
+    margin-right: 10px;
+    width: 850px;
+    height: 30px;
 }
 #audio-indicator {
-    display: inline-block;
+    height: 30px;
+}
+#rec-progBar-div {
+    margin-bottom: 0px;
+    width: 1040px;
+    height: 30px;
 }

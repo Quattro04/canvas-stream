@@ -1,7 +1,6 @@
 var socket = io.connect();
 
 function ChatController($scope) {
-    
 
     $scope.messages = [];
     $scope.roster = [];
@@ -34,28 +33,20 @@ function ChatController($scope) {
     
 }
 
-
-
-
 var canW = "900";
 var canH = "563";
 
-var canvas, ctx, holding, flag = false;
+var canvas, liveFeed, ctx, holding, flag = false;
 
 var boudRect;
 
 var drawColor = "black";
-var drawSize = 2;
-var drawTool = "pencil";
+var drawSize = 1;
+var drawTool = "brush";
 
 var audio;
 
 function init() {
-    
-    /*var img = document.getElementById('image');
-    var cs = getComputedStyle(img);
-    var width = parseInt(cs.getPropertyValue('width'), 10);
-    var height = parseInt(cs.getPropertyValue('height'), 10);*/
     
     canvas = document.getElementById('canv');
     
@@ -67,17 +58,22 @@ function init() {
     boudRect = canvas.getBoundingClientRect();
 
     canvas.addEventListener("mousemove", function (e) {
-        findxy('move', e)
+        findxy('move', e);
     }, false);
     canvas.addEventListener("mousedown", function (e) {
-        findxy('down', e)
+        findxy('down', e);
     }, false);
     canvas.addEventListener("mouseup", function (e) {
-        findxy('up', e)
+        findxy('up', e);
     }, false);
     canvas.addEventListener("mouseout", function (e) {
-        findxy('out', e)
+        findxy('out', e);
     }, false);
+    
+    //canvas.disabled = true;
+    document.getElementById("mute-button").disabled = true;
+    
+    liveFeed = document.getElementById("live-div");
 }
 
 function changeColor(obj) {
@@ -106,12 +102,23 @@ function changeColor(obj) {
     }
 }
 
-function draw(xC,yC,tool,color,size) {
-    if (tool == "pencil") {
-        ctx.beginPath();
+function draw(xC,yC,tool,color,size,clicked) {
+    if (tool == "brush") {
+        if (clicked) {
+            ctx.beginPath();
+            ctx.lineWidth = size;
+            ctx.lineJoin = ctx.lineCap = 'round';
+            ctx.moveTo(xC,yC);
+        }
+        else {
+            ctx.lineTo(xC,yC);
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
+        /*ctx.beginPath();
         ctx.arc(xC,yC,size,0,2*Math.PI);
         ctx.fillStyle = color;
-        ctx.fill();
+        ctx.fill();*/
     }
     else if (tool == "spray") {
         ctx.fillStyle = color;
@@ -125,32 +132,6 @@ function draw(xC,yC,tool,color,size) {
     }
 }
 
-
-
-/*function drawPencil(x,y,col,size) {
-    /*ctx.beginPath();
-    ctx.moveTo(pX,pY);
-    ctx.lineTo(cX,cY);
-    ctx.strokeStyle = col;
-    ctx.lineWidth = size;
-    ctx.stroke();
-    ctx.closePath();
-    var radius = size*2;
-    
-}
-
-function drawSpray(x,y,col,size) {
-    var radius = size*2;
-    ctx.fillStyle = col;
-    for (var i = radius; i--; ) {
-        var offsetX = getRandomInt(-radius, radius);
-        var offsetY = getRandomInt(-radius, radius);
-        if (Math.abs(offsetX) + Math.abs(offsetY) < (radius*2) - (radius/2)) {
-            ctx.fillRect(x + offsetX, y + offsetY, 1, 1);
-        }
-    }
-}*/
-
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -158,7 +139,7 @@ function getRandomInt(min, max) {
 function toolChanged() {
     var idx = $("input[name=tools]:checked").val();
     if (idx == 1) {
-        drawTool = "pencil";
+        drawTool = "brush";
     }
     else if (idx == 2) {
         drawTool = "spray";;
@@ -166,40 +147,39 @@ function toolChanged() {
 }
 
 function changeSize(idx) {
-    drawSize = idx*10-5;
+    drawSize = idx*idx*idx;
 }
 
 var x;
 var y;
+var img;
 
 function findxy(res, e) {
     
     if (res == 'down') {
         
+        // console.log(audio.currentTime);
+        
         x = e.clientX + document.body.scrollLeft - boudRect.left;
         y = e.clientY + document.body.scrollTop - boudRect.top;
         holding = true;
         
+        //img = canvas.toDataURL();
+        
         // Draw with selected tool
             
-        draw(x,y,drawTool,drawColor,drawSize);
-            
-        /*if (drawTool == "pencil") {
-            drawPencil(x,y,drawColor,drawSize);
-        }
-        else if (drawTool == "spray") {
-            drawSpray(x,y,drawColor,drawSize);
-        }*/
+        draw(x,y,drawTool,drawColor,drawSize,true);
         
         // Send data to server
-        
         socket.emit('draw', {
+            x: x,
+            y: y,
             tool: drawTool,
             color: drawColor,
             size: drawSize,
-            x: x,
-            y: y
+            clicked: true
         });
+        //socket.emit('canvas-shot', { img : img });
         
     }
     if (res == 'up' || res == "out") {
@@ -213,18 +193,22 @@ function findxy(res, e) {
             x = e.clientX + document.body.scrollLeft - boudRect.left;
             y = e.clientY + document.body.scrollTop - boudRect.top;
             
+            //img = canvas.toDataURL();
+            //socket.emit('canvas-shot', { img : img });
+            
             // Draw with selected tool
             
-            draw(x,y,drawTool,drawColor,drawSize);
+            draw(x,y,drawTool,drawColor,drawSize,false);
             
             // Send data to server
-            
+
             socket.emit('draw', {
+                x: x,
+                y: y,
                 tool: drawTool,
                 color: drawColor,
                 size: drawSize,
-                x: x,
-                y: y,
+                clicked: false
             });
         }
     }
@@ -237,30 +221,47 @@ function playButtonPressed() {
     socket.emit('play-request');
 }
 
-function moveProgress(duration) {
+var muted = false;
+function muteButtonPressed() {
+    if (muted) {
+        audio.muted = false;
+        muted = false;
+        document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
+    }
+    else {
+        audio.muted = true;
+        muted = true;
+        document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-off");
+    }
+}
+
+function moveProgress() {
   var elem = document.getElementById("progBar");   
   var idx = 0;
   var width = 0;
   var id = setInterval(frame, 250);
+  
   function frame() {
-    if (idx >= duration) {
+    if (audio.currentTime == audio.duration) {
       clearInterval(id);
     } else {
-      idx = idx + 0.25;
-      width = (idx / duration) * 100;
-      
+      width = (audio.currentTime / audio.duration) * 100;
       elem.style.width = width + '%'; 
     }
+    $("#audio-indicator").html(parseInt(audio.currentTime));
   }
 }
+
+var recorder;
     
 $(document).ready(function() {
     
     socket.on('draw-response', function (data) {
-        draw(data.x,data.y,data.tool,data.color,data.size);
+        draw(data.x,data.y,data.tool,data.color,data.size,data.clicked);
     });
     
     socket.on('play-response', function (file) {
+        
         
         $("#audio-indicator").html('Loading...');
         document.getElementById("play-button").disabled = true;
@@ -269,21 +270,152 @@ $(document).ready(function() {
         
         // When audio file is loaded
         audio.addEventListener('loadedmetadata', function() {
-            //console.log("Playing " + file.name + ", for: " + audio.duration + "seconds.");
-            //audio.play(); 
             socket.emit('play-ready');
         });
+        
+        audio.onended = function() {
+            socket.emit('audio-ended');
+            document.getElementById("play-button").disabled = false;
+            document.getElementById("progBar").style.width = "0%";
+            document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
+            document.getElementById("mute-button").disabled = true;
+            
+            
+            
+            /*recorder.stop(function(blob) {
+                var url = URL.createObjectURL(blob);
+                window.open(url);
+            });*/
+        };
         
         
     })
     
     socket.on('play-ready-response', function (file) {
-        $("#audio-indicator").html(file.name);
+        canvas.style.pointerEvents = "auto";
+        document.getElementById("mute-button").disabled = false;
         audio.play();
+        moveProgress();
         
-        var dur = parseInt(audio.duration, 10);
+        //audio.currentTime = 50;
         
-        moveProgress(dur);
+        /*recorder = new CanvasRecorder(canvas, {
+            disableLogs: false
+        });
+        recorder.record();*/
         
     });
+    
+    socket.on('newUser-audio', function (data) {
+        document.getElementById("play-button").disabled = true;
+        
+        audio = new Audio(data.song);
+        
+        audio.addEventListener('loadedmetadata', function() {
+            socket.emit('newUser-audio-ready');
+        });
+    });
+    
+    socket.on('newUser-audio-ready-response', function (data) {
+        canvas.style.pointerEvents = "auto";
+        audio.play();
+        audio.currentTime = data.time;
+        moveProgress();
+    });
+    
+    $('#records-panel').on("click", function (event) {
+        if (event.target == this) return;
+        clickedRecord = event.target.id;
+        document.getElementById("rec-play-button").disabled = false;
+    });
+    
+    socket.on('canvas-shot-response', function (data) {
+        
+        while (liveFeed.firstChild) {
+            liveFeed.removeChild(liveFeed.firstChild);
+        }
+        
+        var elem = document.createElement("img");
+        elem.src = data.img;
+        elem.height = 563;
+        elem.width = 900;
+        liveFeed.appendChild(elem);
+    });
+    
 });
+
+var recCtx;
+function initRecords() {
+    document.getElementById("rec-play-button").disabled = true;
+    var recCanv = document.getElementById('recCanv');
+
+    recCanv.width = canW;
+    recCanv.height = canH;
+    
+    recCtx = recCanv.getContext("2d");
+    
+    socket.emit('get-record-names');
+    var i = 0;
+    socket.on('record-names-response', function (data) {
+        data.names.forEach(function(name) {
+            $('#records-panel').append($('<div id=\"' + i + '\"></div>').html(name));
+            i++;
+        });
+    })
+}
+
+var clickedRecord;
+function playRecordPressed() {
+     socket.emit('get-record', { id : clickedRecord });
+     socket.on('record-response', function (data) {
+         
+        //var d2 = new Date();
+        //var t = d2.getTime();
+
+        //console.log(data.record);
+
+        drawRecord(data.record);
+    })
+}
+
+// Function that calls drawR every 1 millisecond, which calls recDraw if there is something to draw
+function drawRecord(actions) {
+    var i = 0;
+    var j = 0;
+    var id = setInterval(drawR, 1);
+    function drawR() {
+        //console.log(actions[j].time + " " + i);
+        if (actions[j].time - 50000 == i) {
+            recDraw(actions[j].x, actions[j].y, actions[j].tool, actions[j].color, actions[j].size);
+            j++;
+        }
+        else {
+            i++;
+        }
+        if (i == actions[actions.length - 1].time) {
+            clearInterval(id);
+        }
+    }
+}
+
+/*function recDraw(xC,yC,tool,color,size) {
+    if (tool == "brush") {
+        recCtx.beginPath();
+        recCtx.arc(xC,yC,size,0,2*Math.PI);
+        recCtx.fillStyle = color;
+        recCtx.fill();
+    }
+    else if (tool == "spray") {
+        recCtx.fillStyle = color;
+        for (var i = size; i--; ) {
+            var offsetX = getRandomInt(-size, size);
+            var offsetY = getRandomInt(-size, size);
+            if (Math.abs(offsetX) + Math.abs(offsetY) < (size*2) - (size/2)) {
+                recCtx.fillRect(xC + offsetX, yC + offsetY, 1, 1);
+            }
+        }
+    }
+}*/
+
+
+

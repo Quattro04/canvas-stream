@@ -1,134 +1,143 @@
 <!doctype html>
 <html lang="en" ng-app>
-  <head>
-    <title>Canvas</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <head>
+        <title>Canvas</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+        <!-- jQuery library -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+        
+        <link rel="stylesheet" href="/css/myStyle.css">
+        
+        <script src="https://cdn.webrtc-experiment.com/RecordRTC/Whammy.js"></script>
+        <script src="https://cdn.webrtc-experiment.com/RecordRTC/CanvasRecorder.js"></script>
+        
+        
+        <style>
+            body {
+                padding-top: 60px;
+            }
+        </style>
+    </head>
     
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
-    <!-- jQuery library -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
-    <!-- Latest compiled and minified JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
-    
-    <link rel="stylesheet" href="/css/myStyle.css">
-    
-    <style>
-      body {
-        padding-top: 60px;
-      }
-    </style>
-  </head>
-  <body onload="init()">
-    <div class="container" ng-controller="ChatController">
-      <div class="navbar navbar-fixed-top navbar-inverse">
-        <div class="navbar-inner">
-          <div class="pull-right">
-            <a href="#" class="brand">Home</a>
-          </div>
-        </div>
-      </div>
-      <div class="page-header">
-        <h1>Canvas Test</h1>
-      </div>
+    <body onload="init()">
+        <div class="container" ng-controller="ChatController">
+            <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+                <div class="container">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" href="index.html">Home</a>
+                    </div>
+                    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                        <ul class="nav navbar-nav">
+                            <li>
+                                <a href="#">Draw</a>
+                            </li>
+                            <li>
+                                <a href="records.html">Records</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
       
-      <div id="canv-div" class="col-sm-10">
-        <canvas id="canv"></canvas>
-      </div>
-      <div id="side-panel" class="col-sm-2">
-        
-        <form class="form-horizontal" role="form">
-          <div class="form-group row">
-            <button id="play-button" type="button" class="btn btn-default" onclick="playButtonPressed()"><span class="glyphicon glyphicon-triangle-right"></span></button>
-            <div id="audio-indicator"></div>
-          </div>
-            <div class="progress">
-              <div id="progBar" class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                <span class="sr-only">20% Complete</span>
-              </div>
-          </div>
-        </form>
-        
-        
-        <form role="form">
-          <div class="radio">
-            <label><input type="radio" name="tools" value="1" checked="checked" onchange="toolChanged();">Pencil</label>
-          </div>
-          <div class="radio">
-            <label><input type="radio" name="tools" value="2" onchange="toolChanged();">Spray</label>
-          </div>
-        </form>
-        
-        
-        <div style="background:green;" id="green" class="colors" onclick="changeColor(this)"></div>
-        <div style="background:blue;" id="blue" class="colors" onclick="changeColor(this)"></div>
-        <div style="background:red;" id="red" class="colors" onclick="changeColor(this)"></div>
-        <div style="background:yellow;" id="yellow" class="colors" onclick="changeColor(this)"></div>
-        <div style="background:orange;" id="orange" class="colors" onclick="changeColor(this)"></div>
-        <div style="background:black;" id="black" class="colors" onclick="changeColor(this)"></div>
-        
-        <select name="size-dropdown" onchange="if (this.selectedIndex) changeSize(this.selectedIndex);">
-            <option value="-1">--</option>
-            <option value="1">1</option> 
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="1">4</option> 
-            <option value="2">5</option>
-            <option value="3">6</option>
-            <option value="1">7</option> 
-            <option value="2">8</option>
-            <option value="3">9</option>
-            <option value="3">10</option>
-        </select>
-        
-      </div>
-      
-      
+            <div class="page-header">
+                <button id="play-button" type="button" class="play btn btn-default" onclick="playButtonPressed()"><span class="glyphicon glyphicon-triangle-right"></span></button>
 
-        <div class="col-sm-3">
-          <ul class="nav nav-list well">
-            <li class="nav-header">Local Users</li>
-            <li ng-repeat="user in roster" ng-bind="user">
-            </li>
-          </ul>
-        </div>
-        <div class="col-sm-9">
-          <table class="table borderless">
-            <thead>
-              <tr>
-                <th class="col-sm-2">Name</th>
-                <th class="col-sm-10">Text</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr ng-repeat="msg in messages">
-                <td class="col-sm-2" ng-bind="msg.name"></td>
-                <td class="col-sm-10" ng-bind="msg.text"></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="row controls">
+                <div id="progBar-div" class="progress">
+                    <div id="progBar" class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div id="audio-indicator">Ready</div></div>
+                </div>
+            </div>
+      
+            <div id="canv-div" class="col-sm-10">
+                <canvas id="canv"></canvas>
+            </div>
+            <div id="side-panel" class="col-sm-2">
+                <form role="form">
+                    <div class="radio">
+                        <label><input type="radio" name="tools" value="1" checked="checked" onchange="toolChanged();">Brush</label>
+                    </div>
+                    <div class="radio">
+                        <label><input type="radio" name="tools" value="2" onchange="toolChanged();">Spray</label>
+                    </div>
+                </form>
+        
+                <div style="background:green;" id="green" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:blue;" id="blue" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:red;" id="red" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:yellow;" id="yellow" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:orange;" id="orange" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:black;" id="black" class="colors" onclick="changeColor(this)"></div>
+        
+                <select name="size-dropdown" onchange="if (this.selectedIndex) changeSize(this.selectedIndex);">
+                    <option>--</option>
+                    <option>1</option> 
+                    <option>2</option>
+                    <option>3</option>
+                    <option>4</option> 
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option> 
+                    <option>8</option>
+                    <option>9</option>
+                    <option>10</option>
+                </select>
+        
+                <button id="mute-button" type="button" class="btn btn-default" onclick="muteButtonPressed()"><span id="mute-icon" class="glyphicon glyphicon-volume-up"></span></button>
+        
+            </div>
             
-            <form ng-submit="send()">
-              <div class="col-sm-2"><input type="text" class="input-block-level" ng-model="name" ng-change="setName()" placeholder="Your Name"></div>
-              <div class="input-append col-sm-10">
-                <input type="text" class="col-sm-10" ng-model="text" placeholder="Message">
-                <input id="sendButton" type="submit" class="col-sm-2 btn btn-default" value="Send" ng-disabled="!text">
-              </div>
-            </form>
-          </div>
-        </div>
+            <div id="live-div" class="col-sm-12">
+            
+            </div>
 
-    </div>
-    <script src="/socket.io/socket.io.js"></script>
-    
-    <!-- <script src="https://cdn.jsdelivr.net/binaryjs/0.2.1/binary.min.js"></script>  -->
-  
-    <script src="/js/angular.min.js"></script>
-    <script src="/js/client.js"></script>
-    <script src="/js/delivery.js"></script>
-    
-  </body>
+            <div class="col-sm-3">
+                <ul class="nav nav-list well">
+                    <li class="nav-header">Local Users</li>
+                    <li ng-repeat="user in roster" ng-bind="user"></li>
+                </ul>
+            </div>
+            <div class="col-sm-9">
+                <table class="table borderless">
+                    <thead>
+                        <tr>
+                            <th class="col-sm-2">Name</th>
+                            <th class="col-sm-10">Text</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="msg in messages">
+                            <td class="col-sm-2" ng-bind="msg.name"></td>
+                            <td class="col-sm-10" ng-bind="msg.text"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="row controls">
+                    <form ng-submit="send()">
+                        <div class="col-sm-2"><input type="text" class="input-block-level" ng-model="name" ng-change="setName()" placeholder="Your Name"></div>
+                            <div class="input-append col-sm-10">
+                                <input type="text" class="col-sm-10" ng-model="text" placeholder="Message">
+                                <input id="sendButton" type="submit" class="col-sm-2 btn btn-default" value="Send" ng-disabled="!text">
+                            </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/js/angular.min.js"></script>
+        <script src="/js/client.js"></script>
+        <script src="/js/delivery.js"></script>
+    </body>
 </html>
