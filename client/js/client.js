@@ -1,6 +1,6 @@
 var socket = io.connect();
 
-function ChatController($scope) {
+/*function ChatController($scope) {
 
     $scope.messages = [];
     $scope.roster = [];
@@ -31,10 +31,12 @@ function ChatController($scope) {
       socket.emit('identify', $scope.name);
     };
     
-}
+}*/
 
-var canW = "900";
-var canH = "563";
+var socketID;
+
+var canW;
+var canH;
 
 var canvas, liveFeed, ctx, holding, flag = false;
 
@@ -46,7 +48,25 @@ var drawTool = "brush";
 
 var audio;
 
-function init() {
+function initNew() {
+    socket.emit('new-user');
+    socket.on('your-ID', function (data) {
+        socketID = data.id;
+    });
+}
+
+function createSession() {
+    var e = document.getElementById("sizeSel");
+    var res = e.options[e.selectedIndex].text;
+    var resArr = res.split(" ");
+    
+    canW = resArr[0];
+    canH = resArr[2];
+}
+
+
+
+function canvasInit() {
     
     canvas = document.getElementById('canv');
     
@@ -255,6 +275,55 @@ function moveProgress() {
 var recorder;
     
 $(document).ready(function() {
+    
+    $('#username-input-form').submit(function() {
+        var name = document.getElementById("username-input").value;
+        document.getElementById("username-input").value = "";
+        socket.emit('change-username', { name : name });
+        return false;
+    });
+    
+    $('#message-input-form').submit(function() {
+        var message = document.getElementById("message-input").value;
+        document.getElementById("message-input").value = "";
+        socket.emit('send-message', { message : message });
+        return false;
+    });
+    
+    socket.on('update-users-response', function (data) {
+        
+        var list = document.getElementById("users-list");
+        while (list.hasChildNodes()) {   
+            list.removeChild(list.firstChild);
+        }
+        
+        var keys = Object.keys(data.users);
+        
+        //$('#users-list').empty();
+        var i;
+        for (i = 0; i < keys.length; i++) {
+            
+            var li = document.createElement("LI");
+            if (keys[i] == socketID) {
+                li.innerHTML = "<b>"+data.users[keys[i]]+" (You)</b>";
+            }
+            else {
+                li.innerHTML = data.users[keys[i]];
+            }
+            li.classList.add("list-group-item");
+            document.getElementById("users-list").appendChild(li);
+            
+            
+            //$('#users-list').append(data.users[keys[i]]);
+        }
+    });
+    
+    socket.on('send-message-response', function (data) {
+        var chat = document.getElementById("chat-panel-body");
+        chat.innerHTML = chat.innerHTML + "<p>" + data.message + "</p>";
+        $('#chat-panel-body').scrollTop($('#chat-panel-body').prop('scrollHeight'));
+    });
+    
     
     socket.on('draw-response', function (data) {
         draw(data.x,data.y,data.tool,data.color,data.size,data.clicked);

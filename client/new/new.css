@@ -1,0 +1,27 @@
+#users-panel {
+   height: 350px;
+}
+#users-panel-body {
+    height: 253px;
+    
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    overflow-y: scroll;
+}
+#chat-panel {
+   height: 350px;
+}
+#chat-panel-body {
+    height: 253px;
+    overflow-y: scroll;
+}
+#chat-panel-footer {
+    position: relative;
+    float: bottom;
+    width: 100%;
+}
+.bootstrap-select {
+    width: 100% !important;
+}

@@ -29,6 +29,9 @@ var server = http.createServer(router);
 var io = socketio.listen(server);
 
 router.use(express.static(path.resolve(__dirname, 'client')));
+
+var usernames = {};
+
 var messages = [];
 var sockets = [];
 
@@ -57,7 +60,7 @@ var playing = false;
 io.set('log level', 1);
 
 io.on('connection', function (socket) {
-    messages.forEach(function (data) {
+    /*messages.forEach(function (data) {
       socket.emit('message', data);
     });
     actions.forEach(function (data) {
@@ -65,16 +68,34 @@ io.on('connection', function (socket) {
     });
     if (playing) {
       socket.emit('newUser-audio', { song : gsDataURL });
-    }
-
+    }*/
+    
     sockets.push(socket);
 
     socket.on('disconnect', function () {
-      sockets.splice(sockets.indexOf(socket), 1);
-      updateRoster();
+      /*sockets.splice(sockets.indexOf(socket), 1);
+      updateRoster();*/
+      delete usernames[socket.id];
+      updateUsers(socket);
+    });
+    
+    socket.on('new-user', function () {
+      usernames[socket.id] = "Anonymous";
+      socket.emit('your-ID', {id : socket.id});
+      updateUsers(socket);
+    });
+    
+    socket.on('change-username', function (data) {
+      usernames[socket.id] = data.name;
+      updateUsers(socket);
+    });
+    
+    socket.on('send-message', function (data) {
+      var msg = "<b>" + usernames[socket.id] + "</b>: " + data.message;
+      io.sockets.emit('send-message-response', {message : msg});
     });
 
-    socket.on('message', function (msg) {
+    /*socket.on('message', function (msg) {
       var text = String(msg || '');
 
       if (!text)
@@ -95,7 +116,7 @@ io.on('connection', function (socket) {
       socket.set('name', String(name || 'Anonymous'), function (err) {
         updateRoster();
       });
-    });
+    });*/
     
     socket.on('draw', function (data) {
       //var d = new Date();
@@ -157,16 +178,8 @@ io.on('connection', function (socket) {
     
 });
 
-function updateRoster() {
-  async.map(
-    sockets,
-    function (socket, callback) {
-      socket.get('name', callback);
-    },
-    function (err, names) {
-      broadcast('roster', names);
-    }
-  );
+function updateUsers(socket) {
+  io.sockets.emit('update-users-response', { users : usernames, myID : socket.id });
 }
 
 function broadcast(event, data) {
