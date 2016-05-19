@@ -25,3 +25,6 @@
 .bootstrap-select {
     width: 100% !important;
 }
+.disabled {
+    pointer-events: none;
+}

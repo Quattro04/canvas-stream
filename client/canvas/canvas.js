@@ -1,46 +1,12 @@
 var socket = io.connect();
 
-/*function ChatController($scope) {
-
-    $scope.messages = [];
-    $scope.roster = [];
-    $scope.name = '';
-    $scope.text = '';
-
-    socket.on('connect', function () {
-      $scope.setName();
-    });
-
-    socket.on('message', function (msg) {
-      $scope.messages.push(msg);
-      $scope.$apply();
-    });
-
-    socket.on('roster', function (names) {
-      $scope.roster = names;
-      $scope.$apply();
-    });
-
-    $scope.send = function send() {
-      //console.log('Sending message:', $scope.text);
-      socket.emit('message', $scope.text);
-      $scope.text = '';
-    };
-
-    $scope.setName = function setName() {
-      socket.emit('identify', $scope.name);
-    };
-    
-}*/
-
-var socketID;
-
-var canW;
-var canH;
-
-var canvas, liveFeed, ctx, holding, flag = false;
+var canvas, pickerCanvas, liveFeed, ctx, holding, flag = false;
+var colorHolding = false;
+var selThick = "1";
 
 var boudRect;
+var pickerBoudRect;
+var imageData;
 
 var drawColor = "black";
 var drawSize = 1;
@@ -48,78 +14,158 @@ var drawTool = "brush";
 
 var audio;
 
-function initNew() {
-    socket.emit('new-user');
-    socket.on('your-ID', function (data) {
-        socketID = data.id;
-    });
-}
-
-function createSession() {
-    var e = document.getElementById("sizeSel");
-    var res = e.options[e.selectedIndex].text;
-    var resArr = res.split(" ");
+function init() {
+    pickerCanvas = document.getElementById('color-picker-canvas');
     
-    canW = resArr[0];
-    canH = resArr[2];
-}
-
-
-
-function canvasInit() {
+    pickerCanvas.width = 256;
+    pickerCanvas.height = 256;
+    
+    var context = pickerCanvas.getContext('2d');
+    var imageObj = new Image();
+    
+    imageObj.onload = function() {
+        context.drawImage(imageObj, 0, 0);
+        context.crossOrigin = "Anonymous";
+        imageData = context.getImageData(0,0,256,256);
+    };
+    imageObj.crossOrigin="anonymous";
+    imageObj.src = 'https://dl.dropboxusercontent.com/s/rp1hndpzpccqblz/spectrum.png';
+    
+    pickerBoudRect = pickerCanvas.getBoundingClientRect();
+    
+    pickerCanvas.addEventListener("mousemove", function (e) {
+        pickColor('move', e);
+    }, false);
+    pickerCanvas.addEventListener("mousedown", function (e) {
+        pickColor('down', e);
+    }, false);
+    pickerCanvas.addEventListener("mouseup", function (e) {
+        pickColor('up', e);
+    }, false);
+    pickerCanvas.addEventListener("mouseout", function (e) {
+        pickColor('out', e);
+    }, false);
+    
+    
+    
+    
     
     canvas = document.getElementById('canv');
     
-    canvas.width = canW;
-    canvas.height = canH;
-    
-    ctx = canvas.getContext("2d");
-    
-    boudRect = canvas.getBoundingClientRect();
-
-    canvas.addEventListener("mousemove", function (e) {
-        findxy('move', e);
-    }, false);
-    canvas.addEventListener("mousedown", function (e) {
-        findxy('down', e);
-    }, false);
-    canvas.addEventListener("mouseup", function (e) {
-        findxy('up', e);
-    }, false);
-    canvas.addEventListener("mouseout", function (e) {
-        findxy('out', e);
-    }, false);
+    socket.emit('canvas-init');
     
     //canvas.disabled = true;
     document.getElementById("mute-button").disabled = true;
-    
-    liveFeed = document.getElementById("live-div");
 }
 
-function changeColor(obj) {
-    switch (obj.id) {
-        case "green":
-            drawColor = "green";
-            break;
-        case "blue":
-            drawColor = "blue";
-            break;
-        case "red":
-            drawColor = "red";
-            break;
-        case "yellow":
-            drawColor = "yellow";
-            break;
-        case "orange":
-            drawColor = "orange";
-            break;
-        case "black":
-            drawColor = "black";
-            break;
-        case "white":
-            drawColor = "white";
-            break;
+function pickColor(res, e) {
+    
+    if (res == 'down') {
+        var xCoord = e.clientX + document.body.scrollLeft - pickerBoudRect.left;
+        var yCoord = e.clientY + document.body.scrollTop - pickerBoudRect.top;
+        
+        getColor(xCoord,yCoord);
+        colorHolding = true;
     }
+    if (res == 'up' || res == "out") {
+        colorHolding = false;
+    }
+    if (res == 'move') {
+        if (colorHolding) {
+            var xCoord = e.clientX + document.body.scrollLeft - pickerBoudRect.left;
+            var yCoord = e.clientY + document.body.scrollTop - pickerBoudRect.top;
+            getColor(xCoord,yCoord);
+        }
+    }
+}
+
+function getColor(xCoord,yCoord) {
+    var index = (256 * 4 * yCoord) + (xCoord * 4);
+    var r = imageData.data[index-4];
+    var g = imageData.data[index-3];
+    var b = imageData.data[index-2];
+    document.getElementById('show-color').style.backgroundColor = "rgb(" + r + "," + g + "," + b + ")";
+    document.getElementById('red').value = r;
+    document.getElementById('green').value = g;
+    document.getElementById('blue').value = b;
+    
+    drawColor = rgbToHex(r,g,b);
+}
+
+function rgbChanged() {
+    var r = document.getElementById('red').value;
+    var g = document.getElementById('green').value;
+    var b = document.getElementById('blue').value;
+    
+    if (isNaN(r) || r == "") {
+        document.getElementById('red').value = "0";
+    }
+    if (isNaN(g) || g == "") {
+        document.getElementById('green').value = "0";
+    }
+    if (isNaN(b) || b == "") {
+        document.getElementById('blue').value = "0";
+    }
+    
+    r = document.getElementById('red').value;
+    g = document.getElementById('green').value;
+    b = document.getElementById('blue').value;
+    
+    drawColor = rgbToHex(r,g,b);
+    document.getElementById('show-color').style.backgroundColor = drawColor;
+}
+
+function thick1() {
+    drawSize = 1;
+    selectedThick(1);
+}
+function thick2() {
+    drawSize = 10;
+    selectedThick(2);
+}
+function thick3() {
+    drawSize = 25;
+    selectedThick(3);
+}
+function thick4() {
+    drawSize = 50;
+    selectedThick(4);
+}
+function thick5() {
+    drawSize = 75;
+    selectedThick(5);
+}
+function thick6() {
+    drawSize = 125;
+    selectedThick(6);
+}
+function thick7() {
+    drawSize = 200;
+    selectedThick(7);
+}
+function thick8() {
+    drawSize = 300;
+    selectedThick(8);
+}
+function thick9() {
+    drawSize = 450;
+    selectedThick(9);
+}
+function thick10() {
+    drawSize = 600;
+    selectedThick(10);
+}
+
+function selectedThick(val) {
+    var selT = "thickLab" + selThick;
+    console.log(selT);
+    document.getElementById(selT).style.backgroundColor = "white";
+    document.getElementById(selT).style.color = "black";
+    
+    selT = "thickLab" + val;
+    document.getElementById(selT).style.backgroundColor = "black";
+    document.getElementById(selT).style.color = "white";
+    selThick = val;
 }
 
 function draw(xC,yC,tool,color,size,clicked) {
@@ -152,22 +198,16 @@ function draw(xC,yC,tool,color,size,clicked) {
     }
 }
 
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function toolChanged() {
-    var idx = $("input[name=tools]:checked").val();
-    if (idx == 1) {
-        drawTool = "brush";
-    }
-    else if (idx == 2) {
-        drawTool = "spray";;
-    }
-}
-
-function changeSize(idx) {
-    drawSize = idx*idx*idx;
 }
 
 var x;
@@ -183,8 +223,6 @@ function findxy(res, e) {
         x = e.clientX + document.body.scrollLeft - boudRect.left;
         y = e.clientY + document.body.scrollTop - boudRect.top;
         holding = true;
-        
-        //img = canvas.toDataURL();
         
         // Draw with selected tool
             
@@ -212,11 +250,6 @@ function findxy(res, e) {
             
             x = e.clientX + document.body.scrollLeft - boudRect.left;
             y = e.clientY + document.body.scrollTop - boudRect.top;
-            
-            //img = canvas.toDataURL();
-            //socket.emit('canvas-shot', { img : img });
-            
-            // Draw with selected tool
             
             draw(x,y,drawTool,drawColor,drawSize,false);
             
@@ -276,54 +309,35 @@ var recorder;
     
 $(document).ready(function() {
     
-    $('#username-input-form').submit(function() {
-        var name = document.getElementById("username-input").value;
-        document.getElementById("username-input").value = "";
-        socket.emit('change-username', { name : name });
-        return false;
-    });
+    socket.on('canvas-init-response', function (data) {
     
-    $('#message-input-form').submit(function() {
-        var message = document.getElementById("message-input").value;
-        document.getElementById("message-input").value = "";
-        socket.emit('send-message', { message : message });
-        return false;
-    });
-    
-    socket.on('update-users-response', function (data) {
+        canvas.width = data.canW;
+        canvas.height = data.canH;
         
-        var list = document.getElementById("users-list");
-        while (list.hasChildNodes()) {   
-            list.removeChild(list.firstChild);
-        }
+        canvas.style.width = data.canW + "px";
+        canvas.style.height = data.canH + "px";
         
-        var keys = Object.keys(data.users);
+        ctx = canvas.getContext("2d");
         
-        //$('#users-list').empty();
-        var i;
-        for (i = 0; i < keys.length; i++) {
-            
-            var li = document.createElement("LI");
-            if (keys[i] == socketID) {
-                li.innerHTML = "<b>"+data.users[keys[i]]+" (You)</b>";
-            }
-            else {
-                li.innerHTML = data.users[keys[i]];
-            }
-            li.classList.add("list-group-item");
-            document.getElementById("users-list").appendChild(li);
-            
-            
-            //$('#users-list').append(data.users[keys[i]]);
-        }
+        boudRect = canvas.getBoundingClientRect();
+        
+        canvas.addEventListener("mousemove", function (e) {
+            findxy('move', e);
+        }, false);
+        canvas.addEventListener("mousedown", function (e) {
+            findxy('down', e);
+        }, false);
+        canvas.addEventListener("mouseup", function (e) {
+            findxy('up', e);
+        }, false);
+        canvas.addEventListener("mouseout", function (e) {
+            findxy('out', e);
+        }, false);
+        
+        var margin = parseInt(data.canW) + 60;
+       // document.getElementById("right-panel").style.marginLeft = margin + "px";
+        pickerBoudRect = pickerCanvas.getBoundingClientRect();
     });
-    
-    socket.on('send-message-response', function (data) {
-        var chat = document.getElementById("chat-panel-body");
-        chat.innerHTML = chat.innerHTML + "<p>" + data.message + "</p>";
-        $('#chat-panel-body').scrollTop($('#chat-panel-body').prop('scrollHeight'));
-    });
-    
     
     socket.on('draw-response', function (data) {
         draw(data.x,data.y,data.tool,data.color,data.size,data.clicked);

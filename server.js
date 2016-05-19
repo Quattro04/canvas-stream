@@ -30,10 +30,12 @@ var io = socketio.listen(server);
 
 router.use(express.static(path.resolve(__dirname, 'client')));
 
-var usernames = {};
-
-var messages = [];
 var sockets = [];
+var usernames = {};
+var userNum;
+
+var sessionData = {name:"", canW:0, canH:0};
+var sessionRunning = false;
 
 var recordNames = [];
 var records = [];
@@ -73,8 +75,7 @@ io.on('connection', function (socket) {
     sockets.push(socket);
 
     socket.on('disconnect', function () {
-      /*sockets.splice(sockets.indexOf(socket), 1);
-      updateRoster();*/
+      sockets.splice(sockets.indexOf(socket), 1);
       delete usernames[socket.id];
       updateUsers(socket);
     });
@@ -93,6 +94,22 @@ io.on('connection', function (socket) {
     socket.on('send-message', function (data) {
       var msg = "<b>" + usernames[socket.id] + "</b>: " + data.message;
       io.sockets.emit('send-message-response', {message : msg});
+    });
+    
+    socket.on('start-session', function (data) {
+      userNum = sockets.length;
+      sessionData.name = data.name;
+      sessionData.canW = data.width;
+      sessionData.canH = data.height;
+      io.sockets.emit('start-session-response');
+    });
+    
+    socket.on('canvas-init', function () {
+      socketsReady += 1;
+      if (socketsReady == userNum) {
+        socketsReady = 0;
+        io.sockets.emit('canvas-init-response', {name : sessionData.name, canW : sessionData.canW, canH : sessionData.canH });
+      }
     });
 
     /*socket.on('message', function (msg) {
@@ -140,7 +157,7 @@ io.on('connection', function (socket) {
     
     socket.on('play-ready', function (data) {
       socketsReady += 1;
-      if (socketsReady == sockets.length) {
+      if (socketsReady == usernames.length) {
         socketsReady = 0;
         io.sockets.emit('play-ready-response', { name : 'Greensleeves' });
         
@@ -180,12 +197,6 @@ io.on('connection', function (socket) {
 
 function updateUsers(socket) {
   io.sockets.emit('update-users-response', { users : usernames, myID : socket.id });
-}
-
-function broadcast(event, data) {
-  sockets.forEach(function (socket) {
-    socket.emit(event, data);
-  });
 }
 
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){

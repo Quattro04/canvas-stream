@@ -1,0 +1,123 @@
+.page-header {
+    height: 40px;
+}
+#canv {
+    border: 1px solid #000000;
+    margin-left: 30px;
+    float: left;
+}
+#left-panel {
+    width: 190px;
+    float: left;
+    margin-left: 30px;
+}
+#tool-column {
+    float: left;
+    width: 100px;
+}
+#thickness-and-brightness {
+    float: right;
+    display: flex;
+    flex-direction: column;
+}
+#thickness-column {
+    width: 70px;
+    flex: 1;
+}
+#brightness-column {
+    margin-top: 30px;
+    width: 70px;
+}
+.tool-div {
+    width: 100%;
+    height: 45px;
+}
+.tool-number {
+    width: 40px;
+    height: 45px;
+}
+.tool {
+    width: 100%;
+    height: 45px;
+}
+.thickness-div {
+    width: 100%;
+    height: 30px;
+}
+.thickness-number {
+    width: 40px;
+    height: 30px;
+    background-color: white;
+}
+.thickness {
+    width: 100%;
+    height: 30px;
+}
+#right-panel {
+    float: left;
+    margin-left: 30px;
+}
+#color-picker-canvas {
+    width: 256px;
+    height: 256px;
+    cursor: url(/images/picker.cur), pointer;
+}
+#color-picker-data {
+    margin-top: 5px;
+}
+#rgb-values {
+    width: 256px;
+    height: 30px;
+}
+.rgb-input {
+    width: 50px !important;
+}
+#show-color {
+    border: 1px solid #000000;
+    background-color: black;
+    margin-top: 5px;
+    height: 20px;
+}
+
+#recCanv {
+    width: 900px;
+    height: 563px;
+    border: 1px solid #000000;
+}
+#image {
+    height: 100%;
+    width: 100%;
+}
+.colors {
+    width: 16%;
+    height: 30px;
+}
+#sendButton {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+.play {
+    float: left;
+    margin-left: 15px;
+    margin-right: 10px;
+    height: 30px;
+}
+#mute-button {
+    float: left;
+    height: 30px;
+}
+#progBar-div {
+    float: left;
+    margin-bottom: 0px;
+    margin-right: 10px;
+    width: 93%;
+    height: 30px;
+}
+#audio-indicator {
+    height: 30px;
+}
+#rec-progBar-div {
+    margin-bottom: 0px;
+    width: 1040px;
+    height: 30px;
+}

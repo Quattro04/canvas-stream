@@ -1,0 +1,259 @@
+<!-- INDEX PAGE FOR CANVAS -->
+
+<!doctype html>
+<html lang="en" ng-app>
+    <head>
+        <title>Canvas</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+        <!-- jQuery library -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+        
+        <link rel="stylesheet" href="/canvas/canvas.css">
+        
+        <style>
+            body {
+                padding-top: 60px;
+            }
+        </style>
+    </head>
+    
+    <body onload="init()">
+
+        <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="index.html">Home</a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav">
+                        <li>
+                            <a href="#">Draw</a>
+                        </li>
+                        <li>
+                            <a href="records.html">Records</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+  
+        <div class="page-header">
+            <button id="play-button" type="button" class="play btn btn-default" onclick="playButtonPressed()"><span class="glyphicon glyphicon-triangle-right"></span></button>
+
+            <div id="progBar-div" class="progress">
+                <div id="progBar" class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div id="audio-indicator">Ready</div></div>
+            </div>
+            
+            <button id="mute-button" type="button" class="btn btn-default" onclick="muteButtonPressed()"><span id="mute-icon" class="glyphicon glyphicon-volume-up"></span></button>
+        </div>
+            <div id="left-panel">
+                <div id="tool-column" class="btn-group-vertical" role="group">
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>A</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>B</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>C</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>D</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>E</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>F</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>G</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>H</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>I</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>J</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>K</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>L</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>M</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                    <div class="input-group tool-div">
+                      <span class="input-group-addon tool-number" id="basic-addon1"><b>N</b></span>
+                      <button type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
+                    </div>
+                </div>
+                <div id="thickness-and-brightness">
+                    <div id="thickness-column" class="btn-group-vertical" role="group">
+                        <div class="input-group thickness-div">
+                          <span id="thickLab1" class="input-group-addon thickness-number" id="basic-addon1"><b>1</b></span>
+                          <button onclick="thick1()" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab2" class="input-group-addon thickness-number" id="basic-addon2"><b>2</b></span>
+                          <button onclick="thick2()" class="btn btn-default thickness" aria-describedby="basic-addon2"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab3" class="input-group-addon thickness-number" id="basic-addon3"><b>3</b></span>
+                          <button onclick="thick3()" class="btn btn-default thickness" aria-describedby="basic-addon3"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab4" class="input-group-addon thickness-number" id="basic-addon4"><b>4</b></span>
+                          <button onclick="thick4()" class="btn btn-default thickness" aria-describedby="basic-addon4"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab5" class="input-group-addon thickness-number" id="basic-addon5"><b>5</b></span>
+                          <button onclick="thick5()" class="btn btn-default thickness" aria-describedby="basic-addon5"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab6" class="input-group-addon thickness-number" id="basic-addon6"><b>6</b></span>
+                          <button onclick="thick6()" class="btn btn-default thickness" aria-describedby="basic-addon6"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab7" class="input-group-addon thickness-number" id="basic-addon7"><b>7</b></span>
+                          <button onclick="thick7()" class="btn btn-default thickness" aria-describedby="basic-addon7"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab8" class="input-group-addon thickness-number" id="basic-addon8"><b>8</b></span>
+                          <buttononclick="thick8()" class="btn btn-default thickness" aria-describedby="basic-addon8"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab9" class="input-group-addon thickness-number" id="basic-addon9"><b>9</b></span>
+                          <button onclick="thick9()" class="btn btn-default thickness" aria-describedby="basic-addon9"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span id="thickLab10" class="input-group-addon thickness-number" id="basic-addon10"><b>10</b></span>
+                          <button onclick="thick10()" class="btn btn-default thickness" aria-describedby="basic-addon10"></button>
+                        </div>
+                    </div>
+                    <div id="brightness-column" class="btn-group-vertical" role="group">
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>1</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>2</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>3</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>4</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>5</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>6</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>7</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>8</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>9</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                        <div class="input-group thickness-div">
+                          <span class="input-group-addon thickness-number" id="basic-addon1"><b>10</b></span>
+                          <button type="button" class="btn btn-default thickness" aria-describedby="basic-addon1"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+              
+      
+            <canvas id="canv"></canvas>
+            
+            <div id="right-panel">
+                <canvas id="color-picker-canvas"></canvas>
+                <div id="color-picker-data">
+                  <div id="rgb-values" class="input-group">
+                    <span class="input-group-addon rgb-label" id="basic-addon1">R</span>
+                    <input id="red" value="0" type="text" maxlength="3" class="rgb-input form-control" onchange="rgbChanged()" aria-describedby="basic-addon1">
+                    <span class="input-group-addon rgb-label" id="basic-addon2">G</span>
+                    <input id="green" value="0" type="text" maxlength="3" class="rgb-input form-control" onchange="rgbChanged()" aria-describedby="basic-addon2">
+                    <span class="input-group-addon rgb-label" id="basic-addon3">B</span>
+                    <input id="blue" value="0" type="text" maxlength="3" class="rgb-input form-control" onchange="rgbChanged()" aria-describedby="basic-addon3">
+                  </div>
+                  <div id="show-color"></div>
+                </div>
+                
+               <!-- <form role="form">
+                    <div class="radio">
+                        <label><input type="radio" name="tools" value="1" checked="checked" onchange="toolChanged();">Brush</label>
+                    </div>
+                    <div class="radio">
+                        <label><input type="radio" name="tools" value="2" onchange="toolChanged();">Spray</label>
+                    </div>
+                </form>
+        
+                <div style="background:green;" id="green" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:blue;" id="blue" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:red;" id="red" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:yellow;" id="yellow" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:orange;" id="orange" class="colors" onclick="changeColor(this)"></div>
+                <div style="background:black;" id="black" class="colors" onclick="changeColor(this)"></div>
+        
+                <select name="size-dropdown" onchange="if (this.selectedIndex) changeSize(this.selectedIndex);">
+                    <option>--</option>
+                    <option>1</option> 
+                    <option>2</option>
+                    <option>3</option>
+                    <option>4</option> 
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option> 
+                    <option>8</option>
+                    <option>9</option>
+                    <option>10</option>
+                </select> !-->
+                
+            </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/canvas/canvas.js"></script>
+    </body>
+</html>
