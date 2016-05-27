@@ -3,6 +3,7 @@ var socket = io.connect();
 var canvas, pickerCanvas, liveFeed, ctx, holding, flag = false;
 var colorHolding = false;
 var selThick = "1";
+var selTool = "1";
 
 var boudRect;
 var pickerBoudRect;
@@ -10,7 +11,9 @@ var imageData;
 
 var drawColor = "black";
 var drawSize = 1;
-var drawTool = "brush";
+var drawTool = "pencil";
+
+var savedDrawSize;
 
 var audio;
 
@@ -45,10 +48,6 @@ function init() {
     pickerCanvas.addEventListener("mouseout", function (e) {
         pickColor('out', e);
     }, false);
-    
-    
-    
-    
     
     canvas = document.getElementById('canv');
     
@@ -112,53 +111,62 @@ function rgbChanged() {
     b = document.getElementById('blue').value;
     
     drawColor = rgbToHex(r,g,b);
-    document.getElementById('show-color').style.backgroundColor = drawColor;
+    document.getElementById('show-color').style.backgroundColor = "rgb(" + r + "," + g + "," + b + ")";
 }
 
 function thick1() {
     drawSize = 1;
+    savedDrawSize = 1;
     selectedThick(1);
 }
 function thick2() {
     drawSize = 10;
+    savedDrawSize = 10;
     selectedThick(2);
 }
 function thick3() {
     drawSize = 25;
+    savedDrawSize = 25;
     selectedThick(3);
 }
 function thick4() {
     drawSize = 50;
+    savedDrawSize = 50;
     selectedThick(4);
 }
 function thick5() {
     drawSize = 75;
+    savedDrawSize = 75;
     selectedThick(5);
 }
 function thick6() {
-    drawSize = 125;
+    drawSize = 100;
+    savedDrawSize = 100;
     selectedThick(6);
 }
 function thick7() {
-    drawSize = 200;
+    drawSize = 150;
+    savedDrawSize = 150;
     selectedThick(7);
 }
 function thick8() {
     drawSize = 300;
+    savedDrawSize = 300;
     selectedThick(8);
 }
 function thick9() {
     drawSize = 450;
+    savedDrawSize = 450;
     selectedThick(9);
 }
 function thick10() {
     drawSize = 600;
+    savedDrawSize = 600;
     selectedThick(10);
 }
 
 function selectedThick(val) {
     var selT = "thickLab" + selThick;
-    console.log(selT);
     document.getElementById(selT).style.backgroundColor = "white";
     document.getElementById(selT).style.color = "black";
     
@@ -168,8 +176,65 @@ function selectedThick(val) {
     selThick = val;
 }
 
+function tool1() {
+    drawTool = "pencil";
+    selectedTool(1);
+}
+function tool2() {
+    drawTool = "brush";
+    selectedTool(2);
+}
+function tool3() {
+    drawTool = "line";
+    selectedTool(3);
+}
+function tool4() {
+    selectedTool(4);
+}
+function tool5() {
+    selectedTool(5);
+}
+function tool6() {
+    selectedTool(6);
+}
+function tool7() {
+    selectedTool(7);
+}
+function tool8() {
+    selectedTool(8);
+}
+function tool9() {
+    selectedTool(9);
+}
+function tool10() {
+    selectedTool(10);
+}
+function tool11() {
+    selectedTool(11);
+}
+function tool12() {
+    selectedTool(12);
+}
+function tool13() {
+    selectedTool(13);
+}
+function tool14() {
+    selectedTool(14);
+}
+function selectedTool(val) {
+    var selT = "toolLab" + selTool;
+    document.getElementById(selT).style.backgroundColor = "white";
+    document.getElementById(selT).style.color = "black";
+    
+    selT = "toolLab" + val;
+    document.getElementById(selT).style.backgroundColor = "black";
+    document.getElementById(selT).style.color = "white";
+    selTool = val;
+}
+
+
 function draw(xC,yC,tool,color,size,clicked) {
-    if (tool == "brush") {
+    if (tool == "pencil" || tool == "brush") {
         if (clicked) {
             ctx.beginPath();
             ctx.lineWidth = size;
@@ -177,6 +242,7 @@ function draw(xC,yC,tool,color,size,clicked) {
             ctx.moveTo(xC,yC);
         }
         else {
+            ctx.lineWidth = size;
             ctx.lineTo(xC,yC);
             ctx.strokeStyle = color;
             ctx.stroke();
@@ -185,6 +251,22 @@ function draw(xC,yC,tool,color,size,clicked) {
         ctx.arc(xC,yC,size,0,2*Math.PI);
         ctx.fillStyle = color;
         ctx.fill();*/
+    }
+    else if (tool == "line") {
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        for (var i = size + 100; i--; ) {
+            if (i % 5 == 0) {
+                ctx.fillRect(xC, yC + i, 2, 2);
+                ctx.fillRect(xC, yC - i, 2, 2);
+            }
+        }
+        /*ctx.lineJoin = ctx.lineCap = 'round';
+        ctx.moveTo(xC,yC-100);
+        ctx.lineWidth = size;
+        ctx.lineTo(xC,yC+100);
+        ctx.strokeStyle = color;
+        ctx.stroke();*/
     }
     else if (tool == "spray") {
         ctx.fillStyle = color;
@@ -235,13 +317,17 @@ function findxy(res, e) {
             tool: drawTool,
             color: drawColor,
             size: drawSize,
-            clicked: true
+            clicked: true,
+            time: audio.currentTime
         });
+        
+        savedDrawSize = drawSize;
         //socket.emit('canvas-shot', { img : img });
         
     }
     if (res == 'up' || res == "out") {
         holding = false;
+        drawSize = savedDrawSize;
     }
     if (res == 'move') {
         if (holding) {
@@ -250,6 +336,12 @@ function findxy(res, e) {
             
             x = e.clientX + document.body.scrollLeft - boudRect.left;
             y = e.clientY + document.body.scrollTop - boudRect.top;
+            
+            if(drawTool == "brush") {
+                if (drawSize > 1) {
+                    drawSize = drawSize - (savedDrawSize/100);
+                }
+            }
             
             draw(x,y,drawTool,drawColor,drawSize,false);
             
@@ -261,17 +353,11 @@ function findxy(res, e) {
                 tool: drawTool,
                 color: drawColor,
                 size: drawSize,
-                clicked: false
+                clicked: false,
+                time: audio.currentTime
             });
         }
     }
-}
-
-function playButtonPressed() {
-    $("#audio-indicator").html('Loading...');
-    document.getElementById("play-button").disabled = true;
-    
-    socket.emit('play-request');
 }
 
 var muted = false;
@@ -289,20 +375,21 @@ function muteButtonPressed() {
 }
 
 function moveProgress() {
-  var elem = document.getElementById("progBar");   
-  var idx = 0;
-  var width = 0;
-  var id = setInterval(frame, 250);
-  
-  function frame() {
-    if (audio.currentTime == audio.duration) {
-      clearInterval(id);
-    } else {
-      width = (audio.currentTime / audio.duration) * 100;
-      elem.style.width = width + '%'; 
+    var elem = document.getElementById("progBar");   
+    var idx = 0;
+    var width = 0;
+    var id = setInterval(frame, 250);
+    
+    function frame() {
+        if (audio.currentTime == audio.duration) {
+            clearInterval(id);
+        } 
+        else {
+            width = (audio.currentTime / audio.duration) * 100;
+            elem.style.width = width + '%'; 
+        }
+        $("#audio-indicator").html(parseInt(audio.currentTime));
     }
-    $("#audio-indicator").html(parseInt(audio.currentTime));
-  }
 }
 
 var recorder;
@@ -334,9 +421,14 @@ $(document).ready(function() {
             findxy('out', e);
         }, false);
         
-        var margin = parseInt(data.canW) + 60;
-       // document.getElementById("right-panel").style.marginLeft = margin + "px";
         pickerBoudRect = pickerCanvas.getBoundingClientRect();
+        
+        
+        // Request to start audio
+        $("#audio-indicator").html('Loading...');
+        document.getElementById("play-button").disabled = true;
+    
+        socket.emit('play-request');
     });
     
     socket.on('draw-response', function (data) {
@@ -358,11 +450,16 @@ $(document).ready(function() {
         
         audio.onended = function() {
             socket.emit('audio-ended');
-            document.getElementById("play-button").disabled = false;
+            
+            /*document.getElementById("play-button").disabled = false;
             document.getElementById("progBar").style.width = "0%";
             document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
-            document.getElementById("mute-button").disabled = true;
+            document.getElementById("mute-button").disabled = true;*/
             
+            var url = window.location.href;
+            url = url.slice(0,-7);
+            url = url + "new";
+            window.location.href = url;
             
             
             /*recorder.stop(function(blob) {
@@ -389,7 +486,7 @@ $(document).ready(function() {
         
     });
     
-    socket.on('newUser-audio', function (data) {
+    /*socket.on('newUser-audio', function (data) {
         document.getElementById("play-button").disabled = true;
         
         audio = new Audio(data.song);
@@ -404,101 +501,10 @@ $(document).ready(function() {
         audio.play();
         audio.currentTime = data.time;
         moveProgress();
-    });
-    
-    $('#records-panel').on("click", function (event) {
-        if (event.target == this) return;
-        clickedRecord = event.target.id;
-        document.getElementById("rec-play-button").disabled = false;
-    });
-    
-    socket.on('canvas-shot-response', function (data) {
-        
-        while (liveFeed.firstChild) {
-            liveFeed.removeChild(liveFeed.firstChild);
-        }
-        
-        var elem = document.createElement("img");
-        elem.src = data.img;
-        elem.height = 563;
-        elem.width = 900;
-        liveFeed.appendChild(elem);
-    });
+    });*/
     
 });
 
-var recCtx;
-function initRecords() {
-    document.getElementById("rec-play-button").disabled = true;
-    var recCanv = document.getElementById('recCanv');
-
-    recCanv.width = canW;
-    recCanv.height = canH;
-    
-    recCtx = recCanv.getContext("2d");
-    
-    socket.emit('get-record-names');
-    var i = 0;
-    socket.on('record-names-response', function (data) {
-        data.names.forEach(function(name) {
-            $('#records-panel').append($('<div id=\"' + i + '\"></div>').html(name));
-            i++;
-        });
-    })
-}
-
-var clickedRecord;
-function playRecordPressed() {
-     socket.emit('get-record', { id : clickedRecord });
-     socket.on('record-response', function (data) {
-         
-        //var d2 = new Date();
-        //var t = d2.getTime();
-
-        //console.log(data.record);
-
-        drawRecord(data.record);
-    })
-}
-
-// Function that calls drawR every 1 millisecond, which calls recDraw if there is something to draw
-function drawRecord(actions) {
-    var i = 0;
-    var j = 0;
-    var id = setInterval(drawR, 1);
-    function drawR() {
-        //console.log(actions[j].time + " " + i);
-        if (actions[j].time - 50000 == i) {
-            recDraw(actions[j].x, actions[j].y, actions[j].tool, actions[j].color, actions[j].size);
-            j++;
-        }
-        else {
-            i++;
-        }
-        if (i == actions[actions.length - 1].time) {
-            clearInterval(id);
-        }
-    }
-}
-
-/*function recDraw(xC,yC,tool,color,size) {
-    if (tool == "brush") {
-        recCtx.beginPath();
-        recCtx.arc(xC,yC,size,0,2*Math.PI);
-        recCtx.fillStyle = color;
-        recCtx.fill();
-    }
-    else if (tool == "spray") {
-        recCtx.fillStyle = color;
-        for (var i = size; i--; ) {
-            var offsetX = getRandomInt(-size, size);
-            var offsetY = getRandomInt(-size, size);
-            if (Math.abs(offsetX) + Math.abs(offsetY) < (size*2) - (size/2)) {
-                recCtx.fillRect(xC + offsetX, yC + offsetY, 1, 1);
-            }
-        }
-    }
-}*/
 
 
 

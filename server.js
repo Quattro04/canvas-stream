@@ -32,13 +32,14 @@ router.use(express.static(path.resolve(__dirname, 'client')));
 
 var sockets = [];
 var usernames = {};
-var userNum;
+var usersInNew = 0;
+var userNum = 0;
 
 var sessionData = {name:"", canW:0, canH:0};
 var sessionRunning = false;
 
-var recordNames = [];
 var records = [];
+var record = [];
 
 var actions = [];
 
@@ -57,20 +58,10 @@ reader.readAsDataURL(new File('public/audio/greensleeves.mp3'));
 var startTime;
 
 // If audio is playing
-var playing = false;
 
 io.set('log level', 1);
 
 io.on('connection', function (socket) {
-    /*messages.forEach(function (data) {
-      socket.emit('message', data);
-    });
-    actions.forEach(function (data) {
-      socket.emit('draw-response', data);
-    });
-    if (playing) {
-      socket.emit('newUser-audio', { song : gsDataURL });
-    }*/
     
     sockets.push(socket);
 
@@ -97,7 +88,6 @@ io.on('connection', function (socket) {
     });
     
     socket.on('start-session', function (data) {
-      userNum = sockets.length;
       sessionData.name = data.name;
       sessionData.canW = data.width;
       sessionData.canH = data.height;
@@ -105,11 +95,13 @@ io.on('connection', function (socket) {
     });
     
     socket.on('canvas-init', function () {
+      socket.emit('canvas-init-response', {name : sessionData.name, canW : sessionData.canW, canH : sessionData.canH });
+      /*console.log(userNum);
       socketsReady += 1;
       if (socketsReady == userNum) {
         socketsReady = 0;
         io.sockets.emit('canvas-init-response', {name : sessionData.name, canW : sessionData.canW, canH : sessionData.canH });
-      }
+      }*/
     });
 
     /*socket.on('message', function (msg) {
@@ -152,46 +144,49 @@ io.on('connection', function (socket) {
     
     
     socket.on('play-request', function (data) {
-      io.sockets.emit('play-response', { data : gsDataURL });
+      socket.emit('play-response', { data : gsDataURL });
     });
     
     socket.on('play-ready', function (data) {
       socketsReady += 1;
-      if (socketsReady == usernames.length) {
+      if (socketsReady >= sockets.length) {
         socketsReady = 0;
         io.sockets.emit('play-ready-response', { name : 'Greensleeves' });
         
         var d = new Date();
         startTime = d.getTime();
         
-        playing = true;
+        sessionRunning = true;
       }
       
       
       
     });
     
-    socket.on('newUser-audio-ready', function (data) {
+    /*socket.on('newUser-audio-ready', function (data) {
       var d = new Date();
       var t = d.getTime();
       socket.emit('newUser-audio-ready-response', { time : (t-startTime) / 1000 });
-    });
+    });*/
     
     socket.on('audio-ended', function (data) {
-      recordNames.push("Record 1");
-      records.push(actions);
-      actions = [];
-      playing = false;
-      startTime = 0;
+      if (sessionRunning) {
+        record.push(actions,sessionData);
+        records.push(record);
+        actions = [];
+        record = [];
+        sessionRunning = false;
+        startTime = 0;
+      }
     });
     
-    socket.on('get-record-names', function (data) {
-      socket.emit('record-names-response', { names : recordNames });
+    socket.on('get-records', function (data) {
+      socket.emit('get-records-response', { records: records, canvasData : sessionData });
     });
     
-    socket.on('get-record', function (data) {
-      socket.emit('record-response', { record : records[data.id] });
-    });
+    /*socket.on('get-record', function (data) {
+      socket.emit('record-response', { record : records[data.id], canvasData : sessionData });
+    });*/
     
 });
 

@@ -10,6 +10,24 @@ function initNew() {
 }
 
 function createSession() {
+    var name = document.getElementById("nameInput").value;
+    
+    if (name == "") {
+        document.getElementById("nameInput").style.backgroundColor = "#cf0000";
+        var id = setInterval(clear, 200);
+        var n = 1;
+        function clear() {
+            if (n == 2) {
+                document.getElementById("nameInput").style.backgroundColor = "#ffffff";
+                clearInterval(id);
+            }
+            else {
+                n++;
+            }
+        }
+        return;
+    }
+    
     var e = document.getElementById("sizeSel");
     var res = e.options[e.selectedIndex].text;
     var resArr = res.split(" ");
@@ -23,6 +41,8 @@ function createSession() {
     
     socket.emit('start-session', {name : name, width :  resArr[0], height :  resArr[2]});
 }
+
+
 
 $(document).ready(function() {
     $('#username-input-form').submit(function() {

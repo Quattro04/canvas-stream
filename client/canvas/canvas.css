@@ -35,10 +35,24 @@
 .tool-number {
     width: 40px;
     height: 45px;
+    background-color: white;
+}
+#tool1 {
+    background-image: url('icons/pencil-icon.jpg');
+}
+#tool2 {
+    background-image: url('icons/brush-icon.jpg');
 }
 .tool {
     width: 100%;
     height: 45px;
+}
+.tool:hover {
+    background-position: 0px;
+}
+.tool:focus {
+    background-position: 0px;
+    outline: none;
 }
 .thickness-div {
     width: 100%;
@@ -79,23 +93,11 @@
     height: 20px;
 }
 
-#recCanv {
-    width: 900px;
-    height: 563px;
-    border: 1px solid #000000;
-}
-#image {
-    height: 100%;
-    width: 100%;
-}
 .colors {
     width: 16%;
     height: 30px;
 }
-#sendButton {
-    padding-top: 3px;
-    padding-bottom: 3px;
-}
+
 .play {
     float: left;
     margin-left: 15px;
@@ -114,10 +116,5 @@
     height: 30px;
 }
 #audio-indicator {
-    height: 30px;
-}
-#rec-progBar-div {
-    margin-bottom: 0px;
-    width: 1040px;
     height: 30px;
 }
