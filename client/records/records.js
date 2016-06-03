@@ -8,6 +8,7 @@ var records;
 var clickedRecord;
 
 var audio;
+var playing = false;
 
 var requestAnimationFrame =  
     window.requestAnimationFrame ||
@@ -19,17 +20,18 @@ var requestAnimationFrame =
         return setTimeout(callback, 1);
     };
 
-
+var iSaved = 0;
+var currTimeSaved = 0;
 var animate = function () {
     // The calculations required for the step function
     var start = new Date().getTime();
     var iMax = records[clickedRecord][0].length;
-    var i = 0;
+    var i = iSaved;
 
     var step = function() {
         // Get our current progres
         var timestamp = new Date().getTime();
-        var currTime = timestamp - start;
+        var currTime = timestamp - start + currTimeSaved;
         
         // Draw all actions until currTime
         while (records[clickedRecord][0][i].time <= currTime/1000) {
@@ -40,7 +42,11 @@ var animate = function () {
         }
         
         // If the animation hasn't finished, repeat the step.
-        if (i < iMax - 1) requestAnimationFrame(step);
+        if (i < iMax - 1 && playing) requestAnimationFrame(step);
+        else {
+            iSaved = i;
+            currTimeSaved = currTime;
+        }
         
     };
     // Start the animation
@@ -64,20 +70,36 @@ function init() {
     document.getElementById("mute-button").disabled = true;
 }
 
+var first = true;
 function playRecordPressed() {
+        
+    if (first) {
 
-    canvas.width = records[clickedRecord][1].canW;
-    canvas.height = records[clickedRecord][1].canH;
+        canvas.width = records[clickedRecord][1].canW;
+        canvas.height = records[clickedRecord][1].canH;
+        
+        canvas.style.width = records[clickedRecord][1].canW + "px";
+        canvas.style.height = records[clickedRecord][1].canH + "px";
+        
+        ctx = canvas.getContext("2d");
+        
+        $("#audio-indicator").html('Loading...');
+        document.getElementById("play-button").disabled = true;
     
-    canvas.style.width = records[clickedRecord][1].canW + "px";
-    canvas.style.height = records[clickedRecord][1].canH + "px";
-    
-    ctx = canvas.getContext("2d");
-    
-    $("#audio-indicator").html('Loading...');
-    document.getElementById("play-button").disabled = true;
-
-    socket.emit('play-request');
+        socket.emit('play-request');
+        first = false;
+    }
+    else if (playing) {
+        document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-play");
+        audio.pause();
+        playing = false;
+    }
+    else {
+        document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-pause");
+        audio.play();
+        playing = true;
+        animate();
+    }
 }
 
 
@@ -151,9 +173,11 @@ $(document).ready(function() {
         };
         
         document.getElementById("mute-button").disabled = false;
+        document.getElementById("play-button").disabled = false;
+        document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-pause");
         audio.play();
         moveProgress();
-        
+        playing = true;
         animate();
     });
 });

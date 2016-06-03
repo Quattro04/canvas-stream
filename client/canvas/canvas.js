@@ -11,11 +11,15 @@ var imageData;
 
 var drawColor = "black";
 var drawSize = 1;
-var drawTool = "pencil";
+var drawTool = "hLine";
+var drawAngle = 0;
+var lineCounter = 0;
 
 var savedDrawSize;
 
 var audio;
+var randAngle;
+var randNums;
 
 function init() {
     pickerCanvas = document.getElementById('color-picker-canvas');
@@ -177,18 +181,19 @@ function selectedThick(val) {
 }
 
 function tool1() {
-    drawTool = "pencil";
+    drawTool = "hLine";
     selectedTool(1);
 }
 function tool2() {
-    drawTool = "brush";
+    drawTool = "rLine";
     selectedTool(2);
 }
 function tool3() {
-    drawTool = "line";
+    drawTool = "sprayLine";
     selectedTool(3);
 }
 function tool4() {
+    drawTool = "spray";
     selectedTool(4);
 }
 function tool5() {
@@ -232,9 +237,88 @@ function selectedTool(val) {
     selTool = val;
 }
 
-
-function draw(xC,yC,tool,color,size,clicked) {
-    if (tool == "pencil" || tool == "brush") {
+var sprayNum = 0;
+function draw(xC,yC,tool,color,size,angle,clicked) {
+    if (tool == "hLine") {
+        size = size + 50;
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        //ctx.lineJoin = ctx.lineCap = 'round';
+        ctx.moveTo(xC-(size/2),yC);
+        ctx.lineTo(xC+(size/2),yC);
+        ctx.strokeStyle = color;
+        ctx.stroke();
+    }
+    else if (tool == "rLine") {
+        if (clicked) return;
+        
+        size = size + 50;
+        angle = angle + 90;
+        var cos = Math.cos(Math.PI * angle / 180.0);
+        var sin = Math.sin(Math.PI * angle / 180.0);
+        
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        
+        ctx.moveTo(xC - size/2 * cos, yC - size/2 * sin); ctx.lineTo(xC - (size/2-size/50) * cos, yC - (size/2-size/50) * sin);
+        ctx.moveTo(xC + size/2 * cos, yC + size/2 * sin); ctx.lineTo(xC + (size/2-size/50) * cos, yC + (size/2-size/50) * sin);
+        
+        ctx.moveTo(xC - (size/2-size/20) * cos, yC - (size/2-size/20) * sin); ctx.lineTo(xC - (size/2-size/15) * cos, yC - (size/2-size/15) * sin);
+        ctx.moveTo(xC + (size/2-size/20) * cos, yC + (size/2-size/20) * sin); ctx.lineTo(xC + (size/2-size/15) * cos, yC + (size/2-size/15) * sin);
+        
+        ctx.moveTo(xC - (size/2-size/10) * cos, yC - (size/2-size/10) * sin); ctx.lineTo(xC - (size/2-size/6.5) * cos, yC - (size/2-size/6.5) * sin);
+        ctx.moveTo(xC + (size/2-size/10) * cos, yC + (size/2-size/10) * sin); ctx.lineTo(xC + (size/2-size/6.5) * cos, yC + (size/2-size/6.5) * sin);
+        
+        ctx.moveTo(xC - (size/2-size/5.5) * cos, yC - (size/2-size/5.5) * sin); ctx.lineTo(xC - (size/2-size/3.5) * cos, yC - (size/2-size/3.5) * sin);
+        ctx.moveTo(xC + (size/2-size/5.5) * cos, yC + (size/2-size/5.5) * sin); ctx.lineTo(xC + (size/2-size/3.5) * cos, yC + (size/2-size/3.5) * sin);
+        
+        ctx.moveTo(xC - (size/5.4) * cos, yC - (size/5.4) * sin); ctx.lineTo(xC + (size/5.4) * cos, yC + (size/5.4) * sin);
+        
+        ctx.strokeStyle = color;
+        ctx.stroke();
+    }
+    else if (tool == "sprayLine") {
+        var i;
+        var j;
+        var n = 100;
+        ctx.fillStyle = color;
+        for (i = 0; i < 10; i++) {
+            if (i % 2 == 0) {
+                for (j = 0; j < size; j++) {
+                    if (j % 4 == 0) {
+                        if (randNums[n] == 1) {
+                            ctx.fillRect(xC + j - (size/2), yC + i - 5, 1, 1);
+                            ctx.globalAlpha = 0.2;
+                            ctx.fillRect(xC + j - (size/2) - 2, yC + i - 5, 2, 2);
+                            ctx.fillRect(xC + j - (size/2) + 2, yC + i - 5, 2, 2);
+                            ctx.fillRect(xC + j - (size/2), yC + i - 5 - 2, 2, 2);
+                            ctx.fillRect(xC + j - (size/2), yC + i - 5 + 2, 2, 2);
+                            ctx.globalAlpha = 1;
+                        }
+                        n++;
+                        if (n == 10000) n = 0;
+                    }
+                }
+            }
+        }
+         
+    }
+    else if (tool == "spray") {
+        ctx.fillStyle = color;
+        for (var i = size; i= i-2;) {
+            //var percent1 = ((randNums[sprayNum] - 5000) / 10000);
+            //var percent2 = ((randNums[sprayNum+1] - 5000) / 10000);
+            //console.log(Math.abs(percent1) + Math.abs(percent2));
+            //if (Math.abs(percent1) + Math.abs(percent2) < 0.5) ctx.fillRect(xC + percent1 * size, yC + percent2 * size, 1, 1);
+            var angle = randAngle[sprayNum];
+            var radius = (randNums[sprayNum] / 1000) * size;
+            ctx.fillRect(xC + radius * Math.cos(angle), yC + radius * Math.sin(angle), 1, 1);
+            
+            sprayNum = sprayNum + 2;
+            if (sprayNum >= 10000) sprayNum = 0;
+        }
+    }
+    else if (tool == "pencil" || tool == "brush") {
         if (clicked) {
             ctx.beginPath();
             ctx.lineWidth = size;
@@ -252,32 +336,6 @@ function draw(xC,yC,tool,color,size,clicked) {
         ctx.fillStyle = color;
         ctx.fill();*/
     }
-    else if (tool == "line") {
-        ctx.beginPath();
-        ctx.fillStyle = color;
-        for (var i = size + 100; i--; ) {
-            if (i % 5 == 0) {
-                ctx.fillRect(xC, yC + i, 2, 2);
-                ctx.fillRect(xC, yC - i, 2, 2);
-            }
-        }
-        /*ctx.lineJoin = ctx.lineCap = 'round';
-        ctx.moveTo(xC,yC-100);
-        ctx.lineWidth = size;
-        ctx.lineTo(xC,yC+100);
-        ctx.strokeStyle = color;
-        ctx.stroke();*/
-    }
-    else if (tool == "spray") {
-        ctx.fillStyle = color;
-        for (var i = size; i--; ) {
-            var offsetX = getRandomInt(-size, size);
-            var offsetY = getRandomInt(-size, size);
-            if (Math.abs(offsetX) + Math.abs(offsetY) < (size*2) - (size/2)) {
-                ctx.fillRect(xC + offsetX, yC + offsetY, 1, 1);
-            }
-        }
-    }
 }
 
 function componentToHex(c) {
@@ -294,10 +352,12 @@ function getRandomInt(min, max) {
 
 var x;
 var y;
-var img;
+var prevX;
+var prevY;
 
 function findxy(res, e) {
-    
+    if(!drawSize) drawSize = 1;
+
     if (res == 'down') {
         
         // console.log(audio.currentTime);
@@ -308,7 +368,9 @@ function findxy(res, e) {
         
         // Draw with selected tool
             
-        draw(x,y,drawTool,drawColor,drawSize,true);
+
+        draw(x,y,drawTool,drawColor,drawSize,drawAngle,true);
+
         
         // Send data to server
         socket.emit('draw', {
@@ -318,11 +380,14 @@ function findxy(res, e) {
             color: drawColor,
             size: drawSize,
             clicked: true,
-            time: audio.currentTime
+            //time: audio.currentTime
         });
         
         savedDrawSize = drawSize;
-        //socket.emit('canvas-shot', { img : img });
+        
+        // Save coordinates as prev
+        prevX = x;
+        prevY = y;
         
     }
     if (res == 'up' || res == "out") {
@@ -332,32 +397,51 @@ function findxy(res, e) {
     if (res == 'move') {
         if (holding) {
             
+            
             // Update coordinates
             
             x = e.clientX + document.body.scrollLeft - boudRect.left;
             y = e.clientY + document.body.scrollTop - boudRect.top;
             
-            if(drawTool == "brush") {
+            if (drawTool == "rLine" || drawTool == "sprayLine") {
+                lineCounter++;
+                if (lineCounter == 5) {
+                    deltaX = x - prevX;
+                    deltaY = y - prevY;
+                    drawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+                    // Save coordinates as prev
+                    prevX = x;
+                    prevY = y;
+                    lineCounter = 0;
+                }
+                else {
+                    return;
+                }
+            }
+            
+            if (drawTool == "brush") {
                 if (drawSize > 1) {
                     drawSize = drawSize - (savedDrawSize/100);
                 }
             }
-            
-            draw(x,y,drawTool,drawColor,drawSize,false);
-            
-            // Send data to server
-
-            socket.emit('draw', {
-                x: x,
-                y: y,
-                tool: drawTool,
-                color: drawColor,
-                size: drawSize,
-                clicked: false,
-                time: audio.currentTime
-            });
+            drawAndEmit(); 
         }
     }
+}
+
+function drawAndEmit() {
+    draw(x,y,drawTool,drawColor,drawSize,drawAngle,false);
+            
+    // Send data to server
+    socket.emit('draw', {
+        x: x,
+        y: y,
+        tool: drawTool,
+        color: drawColor,
+        size: drawSize,
+        clicked: false,
+        //time: audio.currentTime
+    });
 }
 
 var muted = false;
@@ -392,12 +476,16 @@ function moveProgress() {
     }
 }
 
-var recorder;
+
     
 $(document).ready(function() {
     
     socket.on('canvas-init-response', function (data) {
-    
+        
+        //console.log(data.randAngle,data.randNums);
+        randNums = data.randNums;
+        randAngle = data.randAngle;
+        
         canvas.width = data.canW;
         canvas.height = data.canH;
         
@@ -428,7 +516,7 @@ $(document).ready(function() {
         $("#audio-indicator").html('Loading...');
         document.getElementById("play-button").disabled = true;
     
-        socket.emit('play-request');
+        //socket.emit('play-request');
     });
     
     socket.on('draw-response', function (data) {
@@ -459,13 +547,7 @@ $(document).ready(function() {
             var url = window.location.href;
             url = url.slice(0,-7);
             url = url + "new";
-            window.location.href = url;
-            
-            
-            /*recorder.stop(function(blob) {
-                var url = URL.createObjectURL(blob);
-                window.open(url);
-            });*/
+            //window.location.href = url;
         };
         
         

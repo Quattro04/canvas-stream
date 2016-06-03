@@ -38,10 +38,13 @@
     background-color: white;
 }
 #tool1 {
-    background-image: url('icons/pencil-icon.jpg');
+    background-image: url('icons/hLine-icon.jpg');
 }
 #tool2 {
-    background-image: url('icons/brush-icon.jpg');
+    background-image: url('icons/rLine-icon.jpg');
+}
+#tool3 {
+    background-image: url('icons/sprayLine-icon.jpg');
 }
 .tool {
     width: 100%;

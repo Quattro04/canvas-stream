@@ -14,15 +14,10 @@ var express = require('express');
 //var BinaryServer = require('binaryjs').BinaryServer;
 var fs = require('fs');
 
-var dl  = require('delivery');
+var dl = require('delivery');
 var FileReader = require('filereader');
 var File = require("File");
-//
-// ## SimpleServer `SimpleServer(obj)`
-//
-// Creates a new instance of SimpleServer with the following options:
-//  * `port` - The HTTP port to listen on. If `process.env.PORT` is set, _it overrides this value_.
-//
+
 var router = express();
 var server = http.createServer(router);
 
@@ -35,7 +30,11 @@ var usernames = {};
 var usersInNew = 0;
 var userNum = 0;
 
-var sessionData = {name:"", canW:0, canH:0};
+var sessionData = {
+  name: "",
+  canW: 0,
+  canH: 0
+};
 var sessionRunning = false;
 
 var records = [];
@@ -50,151 +49,125 @@ var gsDataURL;
 var reader = new FileReader();
 reader.onload = function(e) {
   gsDataURL = reader.result;
-  
+
 }
 reader.readAsDataURL(new File('public/audio/greensleeves.mp3'));
 
-// Start time
-var startTime;
-
-// If audio is playing
+//var rand = require('random-seed').create();
+var randAngle = [];
+var randNums = [];
+//rand.initState();
+var i;
+for (i = 0; i < 10000; i++) {
+  randAngle.push(Math.random() * Math.PI*2);
+  randNums.push(Math.random() * 1000);
+}
 
 io.set('log level', 1);
 
-io.on('connection', function (socket) {
-    
-    sockets.push(socket);
+io.on('connection', function(socket) {
 
-    socket.on('disconnect', function () {
-      sockets.splice(sockets.indexOf(socket), 1);
-      delete usernames[socket.id];
-      updateUsers(socket);
-    });
-    
-    socket.on('new-user', function () {
-      usernames[socket.id] = "Anonymous";
-      socket.emit('your-ID', {id : socket.id});
-      updateUsers(socket);
-    });
-    
-    socket.on('change-username', function (data) {
-      usernames[socket.id] = data.name;
-      updateUsers(socket);
-    });
-    
-    socket.on('send-message', function (data) {
-      var msg = "<b>" + usernames[socket.id] + "</b>: " + data.message;
-      io.sockets.emit('send-message-response', {message : msg});
-    });
-    
-    socket.on('start-session', function (data) {
-      sessionData.name = data.name;
-      sessionData.canW = data.width;
-      sessionData.canH = data.height;
-      io.sockets.emit('start-session-response');
-    });
-    
-    socket.on('canvas-init', function () {
-      socket.emit('canvas-init-response', {name : sessionData.name, canW : sessionData.canW, canH : sessionData.canH });
-      /*console.log(userNum);
-      socketsReady += 1;
-      if (socketsReady == userNum) {
-        socketsReady = 0;
-        io.sockets.emit('canvas-init-response', {name : sessionData.name, canW : sessionData.canW, canH : sessionData.canH });
-      }*/
-    });
+  sockets.push(socket);
 
-    /*socket.on('message', function (msg) {
-      var text = String(msg || '');
+  socket.on('disconnect', function() {
+    sockets.splice(sockets.indexOf(socket), 1);
+    delete usernames[socket.id];
+    updateUsers(socket);
+  });
 
-      if (!text)
-        return;
+  socket.on('new-user', function() {
+    usernames[socket.id] = "Anonymous";
+    socket.emit('your-ID', {
+      id: socket.id
+    });
+    updateUsers(socket);
+  });
 
-      socket.get('name', function (err, name) {
-        var data = {
-          name: name,
-          text: text
-        };
+  socket.on('change-username', function(data) {
+    usernames[socket.id] = data.name;
+    updateUsers(socket);
+  });
 
-        broadcast('message', data);
-        messages.push(data);
+  socket.on('send-message', function(data) {
+    var msg = "<b>" + usernames[socket.id] + "</b>: " + data.message;
+    io.sockets.emit('send-message-response', {
+      message: msg
+    });
+  });
+
+  socket.on('start-session', function(data) {
+    sessionData.name = data.name;
+    sessionData.canW = data.width;
+    sessionData.canH = data.height;
+    io.sockets.emit('start-session-response');
+  });
+
+  socket.on('canvas-init', function() {
+    socket.emit('canvas-init-response', {
+      name: sessionData.name,
+      canW: sessionData.canW,
+      canH: sessionData.canH,
+      randNums: randNums,
+      randAngle: randAngle
+    });
+  });
+
+  socket.on('draw', function(data) {
+    socket.broadcast.emit('draw-response', data);
+    actions.push(data);
+  });
+
+  socket.on('canvas-shot', function(data) {
+    socket.broadcast.emit('canvas-shot-response', data);
+  });
+
+
+  socket.on('play-request', function(data) {
+    socket.emit('play-response', {
+      data: gsDataURL
+    });
+  });
+
+  socket.on('play-ready', function(data) {
+    socketsReady += 1;
+    if (socketsReady >= sockets.length) {
+      socketsReady = 0;
+      io.sockets.emit('play-ready-response', {
+        name: 'Greensleeves'
       });
-    });
 
-    socket.on('identify', function (name) {
-      socket.set('name', String(name || 'Anonymous'), function (err) {
-        updateRoster();
-      });
-    });*/
-    
-    socket.on('draw', function (data) {
-      //var d = new Date();
-      //var t = d.getTime();
-      
-      //console.log((t-startTime-100) / 1000);
-      
-      socket.broadcast.emit('draw-response', data);
-      //io.sockets.emit('time',{ t : (t-startTime-100) / 1000 });
-      actions.push(data);
+      sessionRunning = true;
+    }
+  });
+
+  socket.on('audio-ended', function(data) {
+    if (sessionRunning) {
+      record.push(actions, sessionData);
+      records.push(record);
+      actions = [];
+      record = [];
+      sessionRunning = false;
+      startTime = 0;
+    }
+  });
+
+  socket.on('get-records', function(data) {
+    socket.emit('get-records-response', {
+      records: records,
+      canvasData: sessionData
     });
-    
-    socket.on('canvas-shot', function (data) {
-      socket.broadcast.emit('canvas-shot-response', data);
-    });
-    
-    
-    socket.on('play-request', function (data) {
-      socket.emit('play-response', { data : gsDataURL });
-    });
-    
-    socket.on('play-ready', function (data) {
-      socketsReady += 1;
-      if (socketsReady >= sockets.length) {
-        socketsReady = 0;
-        io.sockets.emit('play-ready-response', { name : 'Greensleeves' });
-        
-        var d = new Date();
-        startTime = d.getTime();
-        
-        sessionRunning = true;
-      }
-      
-      
-      
-    });
-    
-    /*socket.on('newUser-audio-ready', function (data) {
-      var d = new Date();
-      var t = d.getTime();
-      socket.emit('newUser-audio-ready-response', { time : (t-startTime) / 1000 });
-    });*/
-    
-    socket.on('audio-ended', function (data) {
-      if (sessionRunning) {
-        record.push(actions,sessionData);
-        records.push(record);
-        actions = [];
-        record = [];
-        sessionRunning = false;
-        startTime = 0;
-      }
-    });
-    
-    socket.on('get-records', function (data) {
-      socket.emit('get-records-response', { records: records, canvasData : sessionData });
-    });
-    
-    /*socket.on('get-record', function (data) {
-      socket.emit('record-response', { record : records[data.id], canvasData : sessionData });
-    });*/
-    
+  });
+
 });
 
 function updateUsers(socket) {
-  io.sockets.emit('update-users-response', { users : usernames, myID : socket.id });
+  io.sockets.emit('update-users-response', {
+    users: usernames,
+    myID: socket.id
+  });
 }
 
-server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
+server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function() {
   var addr = server.address();
   console.log("Server listening at", addr.address + ":" + addr.port);
 });
