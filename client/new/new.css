@@ -1,8 +1,31 @@
+#join-panel {
+   height: 352px;
+}
+#join-panel-heading {
+    height: 50px;
+}
+#join-panel-body {
+    height: 245px;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    overflow-y: scroll;
+}
+#join-button {
+    height: 20px;
+    float: right;
+    padding-top: 0;
+}
+
 #users-panel {
-   height: 350px;
+   height: 352px;
+}
+#users-panel-heading {
+    height: 50px;
 }
 #users-panel-body {
-    height: 253px;
+    height: 245px;
     
     padding-bottom: 0;
     padding-left: 0;
@@ -11,10 +34,13 @@
     overflow-y: scroll;
 }
 #chat-panel {
-   height: 350px;
+   height: 352px;
+}
+#chat-panel-heading {
+   height: 50px;
 }
 #chat-panel-body {
-    height: 253px;
+    height: 245px;
     overflow-y: scroll;
 }
 #chat-panel-footer {

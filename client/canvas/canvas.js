@@ -35,7 +35,7 @@ function init() {
     pickerCanvas = document.getElementById('color-picker-canvas');
     
     pickerCanvas.width = 256;
-    pickerCanvas.height = 256;
+    pickerCanvas.height = 560;
     
     var context = pickerCanvas.getContext('2d');
     var imageObj = new Image();
@@ -43,11 +43,11 @@ function init() {
     imageObj.onload = function() {
         context.drawImage(imageObj, 0, 0);
         context.crossOrigin = "Anonymous";
-        imageData = context.getImageData(0,0,256,256);
+        imageData = context.getImageData(0,0,256,560);
     };
     imageObj.crossOrigin="anonymous";
     //imageObj.src = 'https://dl.dropboxusercontent.com/s/rp1hndpzpccqblz/spectrum.png';
-    imageObj.src = '/images/colorwheel.jpg';
+    imageObj.src = '/images/colorpallete.jpg';
     
     pickerBoudRect = pickerCanvas.getBoundingClientRect();
     
@@ -94,7 +94,9 @@ function pickColor(res, e) {
 }
 
 function getColor(xCoord,yCoord) {
+    
     var index = (256 * 4 * yCoord) + (xCoord * 4);
+    
     var r = imageData.data[index-4];
     var g = imageData.data[index-3];
     var b = imageData.data[index-2];
@@ -102,8 +104,33 @@ function getColor(xCoord,yCoord) {
     document.getElementById('red').value = r;
     document.getElementById('green').value = g;
     document.getElementById('blue').value = b;
-    
     drawColor = rgbToHex(r,g,b);
+    
+    // Converts RGB to HSL and uses H and S for base values, while changing L, then presenting these colors in left panel where user can change brightness.
+    
+    var hslVal = rgbToHsl(r,g,b);
+    
+    var brightnessCol = document.getElementById('brightness-column');
+    var brElements = brightnessCol.childNodes;
+    
+    // If the selected color is shade of gray (if all rgb values are less than 10 points apart), if it is, just set brightness column to gray palette
+    if (Math.abs(r-g) < 10 && Math.abs(r-b) < 10 && Math.abs(g-b) < 10) {
+        for (var i = 0; i < 13; i++) {
+            brElements[(i*2)+1].style.backgroundColor = "hsl(" + 0 + "," + 0 + "%," + (i/12)*100 + "%)";
+        }
+    }
+    else {
+        for (var i = 0; i < 13; i++) {
+            brElements[(i*2)+1].style.backgroundColor = "hsl(" + hslVal[0]*360 + "," + hslVal[1]*100 + "%," + (i/12)*100 + "%)";
+        }
+    }
+    
+    //console.log(drawPercent);
+    
+    
+    //document.getElementById('show-color').style.backgroundColor = "hsl(" + hslVal[0]*360 + "," + hslVal[1]*100 + "%," + 50 + "%)";
+    
+    
 }
 
 function rgbChanged() {
@@ -129,49 +156,73 @@ function rgbChanged() {
     document.getElementById('show-color').style.backgroundColor = "rgb(" + r + "," + g + "," + b + ")";
 }
 
-/*function thick1()  { drawPercent = 5; savedDrawSize = 1; selectedThick(1); }
-function thick2()  { drawPercent = 10; savedDrawSize = 10; selectedThick(2); }
-function thick3()  { drawPercent = 15; savedDrawSize = 25; selectedThick(3); }
-function thick4()  { drawPercent = 20; savedDrawSize = 50; selectedThick(4); }
-function thick5()  { drawPercent = 25; savedDrawSize = 75; selectedThick(5); }
-function thick6()  { drawPercent = 30; savedDrawSize = 100; selectedThick(6); }
-function thick7()  { drawPercent = 35; savedDrawSize = 150; selectedThick(7); }
-function thick8()  { drawPercent = 40; savedDrawSize = 300; selectedThick(8); }
-function thick9()  { drawPercent = 45; savedDrawSize = 450; selectedThick(9); }
-function thick10() { drawPercent = 50; savedDrawSize = 600; selectedThick(10); }
-function thick11() { drawPercent = 55; savedDrawSize = 1; selectedThick(11); }
-function thick12() { drawPercent = 60; savedDrawSize = 10; selectedThick(12); }
-function thick13() { drawPercent = 65; savedDrawSize = 25; selectedThick(13); }
-function thick14() { drawPercent = 70; savedDrawSize = 50; selectedThick(14); }
-function thick15() { drawPercent = 75; savedDrawSize = 75; selectedThick(15); }
-function thick16() { drawPercent = 80; savedDrawSize = 100; selectedThick(16); }
-function thick17() { drawPercent = 85; savedDrawSize = 150; selectedThick(17); }
-function thick18() { drawPercent = 90; savedDrawSize = 300; selectedThick(18); }
-function thick19() { drawPercent = 95; savedDrawSize = 450; selectedThick(19); }
-function thick20() { drawPercent = 100; savedDrawSize = 600; selectedThick(20); }
-function thick21() { drawPercent = 200; savedDrawSize = 450; selectedThick(21); }*/
+function rgbToHsl(r, g, b){
+    r /= 255, g /= 255, b /= 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h, s, l = (max + min) / 2;
 
-function thick1()  { drawPercent = 1; selectedThick(1); }
-function thick2()  { drawPercent = 2; selectedThick(2); }
-function thick3()  { drawPercent = 3; selectedThick(3); }
-function thick4()  { drawPercent = 4; selectedThick(4); }
-function thick5()  { drawPercent = 5; selectedThick(5); }
-function thick6()  { drawPercent = 7; selectedThick(6); }
-function thick7()  { drawPercent = 10; selectedThick(7); }
-function thick8()  { drawPercent = 13; selectedThick(8); }
-function thick9()  { drawPercent = 16; selectedThick(9); }
-function thick10() { drawPercent = 20; selectedThick(10); }
-function thick11() { drawPercent = 25; selectedThick(11); }
-function thick12() { drawPercent = 30; selectedThick(12); }
-function thick13() { drawPercent = 35; selectedThick(13); }
-function thick14() { drawPercent = 40; selectedThick(14); }
-function thick15() { drawPercent = 45; selectedThick(15); }
-function thick16() { drawPercent = 50; selectedThick(16); }
-function thick17() { drawPercent = 55; selectedThick(17); }
-function thick18() { drawPercent = 60; selectedThick(18); }
-function thick19() { drawPercent = 80; selectedThick(19); }
-function thick20() { drawPercent = 100; selectedThick(20); }
-function thick21() { drawPercent = 200; selectedThick(21); }
+    if(max == min){
+        h = s = 0; // achromatic
+    }else{
+        var d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max){
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return [h, s, l];
+}
+
+/*function hslToRgb(h, s, l){
+    var r, g, b;
+
+    if(s == 0){
+        r = g = b = l; // achromatic
+    }else{
+        var hue2rgb = function hue2rgb(p, q, t){
+            if(t < 0) t += 1;
+            if(t > 1) t -= 1;
+            if(t < 1/6) return p + (q - p) * 6 * t;
+            if(t < 1/2) return q;
+            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        }
+
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}*/
+
+function thick1()  { drawPercent = 1; savedDrawPercent = 1; selectedThick(1); }
+function thick2()  { drawPercent = 2; savedDrawPercent = 2; selectedThick(2); }
+function thick3()  { drawPercent = 3; savedDrawPercent = 3; selectedThick(3); }
+function thick4()  { drawPercent = 4; savedDrawPercent = 4; selectedThick(4); }
+function thick5()  { drawPercent = 5; savedDrawPercent = 5; selectedThick(5); }
+function thick6()  { drawPercent = 7; savedDrawPercent = 7; selectedThick(6); }
+function thick7()  { drawPercent = 10; savedDrawPercent = 10; selectedThick(7); }
+function thick8()  { drawPercent = 13; savedDrawPercent = 13; selectedThick(8); }
+function thick9()  { drawPercent = 16; savedDrawPercent = 16; selectedThick(9); }
+function thick10() { drawPercent = 20; savedDrawPercent = 20; selectedThick(10); }
+function thick11() { drawPercent = 25; savedDrawPercent = 25; selectedThick(11); }
+function thick12() { drawPercent = 30; savedDrawPercent = 30; selectedThick(12); }
+function thick13() { drawPercent = 35; savedDrawPercent = 35; selectedThick(13); }
+function thick14() { drawPercent = 40; savedDrawPercent = 40; selectedThick(14); }
+function thick15() { drawPercent = 45; savedDrawPercent = 45; selectedThick(15); }
+function thick16() { drawPercent = 50; savedDrawPercent = 50; selectedThick(16); }
+function thick17() { drawPercent = 55; savedDrawPercent = 55; selectedThick(17); }
+function thick18() { drawPercent = 60; savedDrawPercent = 60; selectedThick(18); }
+function thick19() { drawPercent = 80; savedDrawPercent = 80; selectedThick(19); }
+function thick20() { drawPercent = 100; savedDrawPercent = 100; selectedThick(20); }
+function thick21() { drawPercent = 200; savedDrawPercent = 200; selectedThick(21); }
 
 function selectedThick(val) {
     var selT = "thick" + selThick;
@@ -184,62 +235,41 @@ function selectedThick(val) {
     selThick = val;
 }
 
-function tool1() {
-    drawTool = "hLine";
-    selectedTool(1);
+function bright1()  { selectedBright(1); }
+function bright2()  { selectedBright(2); }
+function bright3()  { selectedBright(3); }
+function bright4()  { selectedBright(4); }
+function bright5()  { selectedBright(5); }
+function bright6()  { selectedBright(6); }
+function bright7()  { selectedBright(7); }
+function bright8()  { selectedBright(8); }
+function bright9()  { selectedBright(9); }
+function bright10() { selectedBright(10); }
+function bright11() { selectedBright(11); }
+function bright12() { selectedBright(12); }
+function bright13() { selectedBright(13); }
+
+function selectedBright(val) {
+    var selB = document.getElementById("bright" + val);
+    document.getElementById('show-color').style.backgroundColor = selB.style.backgroundColor;
+    drawColor = selB.style.backgroundColor;
 }
-function tool2() {
-    drawTool = "rLine";
-    selectedTool(2);
-}
-function tool3() {
-    drawTool = "sprayLine";
-    selectedTool(3);
-}
-function tool4() {
-    drawTool = "spray";
-    selectedTool(4);
-}
-function tool5() {
-    drawTool = "brushInc";
-    selectedTool(5);
-}
-function tool6() {
-    drawTool = "brushIncSprayed";
-    selectedTool(6);
-}
-function tool7() {
-    drawTool = "brushDec";
-    selectedTool(7);
-}
-function tool8() {
-    drawTool = "brushDecSprayed";
-    selectedTool(8);
-}
-function tool9() {
-    drawTool = "fullRoundSpray";
-    selectedTool(9);
-}
-function tool10() {
-    drawTool = "stripedRoundSpray";
-    selectedTool(10);
-}
-function tool11() {
-    drawTool = "blackedSpray";
-    selectedTool(11);
-}
-function tool12() {
-    drawTool = "blackedSpraySquare";
-    selectedTool(12);
-}
-function tool13() {
-    drawTool = "brush";
-    selectedTool(13);
-}
-function tool14() {
-    drawTool = "transparent";
-    selectedTool(14);
-}
+
+function tool1() { drawTool = "hLine"; selectedTool(1); }
+function tool2() { drawTool = "rLine"; selectedTool(2); }
+function tool3() { drawTool = "sprayLine"; selectedTool(3); }
+function tool4() { drawTool = "spray"; selectedTool(4); }
+function tool5() { drawTool = "brushInc"; selectedTool(5); }
+function tool6() { drawTool = "brushIncSprayed"; selectedTool(6); }
+function tool7() { drawTool = "brushDec"; selectedTool(7); }
+function tool8() { drawTool = "brushDecSprayed"; selectedTool(8); }
+function tool9() { drawTool = "fullRoundSpray"; selectedTool(9); }
+function tool10() { drawTool = "stripedRoundSpray"; selectedTool(10); }
+function tool11() { drawTool = "blackedSpray"; selectedTool(11); }
+function tool12() { drawTool = "blackedSpraySquare"; selectedTool(12); }
+function tool13() { drawTool = "brush"; selectedTool(13); }
+function tool14() { drawTool = "transparent"; selectedTool(14); }
+
 function selectedTool(val) {
     var selT = "toolLab" + selTool;
     document.getElementById(selT).style.backgroundColor = "white";
@@ -524,11 +554,11 @@ function getRandomInt(min, max) {
 }
 
 function findxy(res, e) {
-    if(!drawPercent) drawPercent = 5;
+    if(!drawPercent) drawPercent = 1;
 
     if (res == 'down') {
         
-        // console.log(audio.currentTime);
+        //console.log(drawPercent,drawColor);
         
         x = e.clientX + document.body.scrollLeft - boudRect.left;
         y = e.clientY + document.body.scrollTop - boudRect.top;
@@ -548,7 +578,7 @@ function findxy(res, e) {
             color: drawColor,
             size: drawPercent,
             clicked: true,
-            //time: audio.currentTime
+            time: audio.currentTime
         });
         
         savedDrawPercent = drawPercent;
@@ -624,15 +654,15 @@ function drawAndEmit() {
     draw(x,y,drawTool,drawColor,drawPercent,drawAngle,false);
             
     // Send data to server
-    /*socket.emit('draw', {
+    socket.emit('draw', {
         x: x,
         y: y,
         tool: drawTool,
         color: drawColor,
-        size: drawSize,
+        size: drawPercent,
         clicked: false,
-        //time: audio.currentTime
-    });*/
+        time: audio.currentTime
+    });
 }
 
 var muted = false;
@@ -709,8 +739,14 @@ $(document).ready(function() {
         // Request to start audio
         $("#audio-indicator").html('Loading...');
         document.getElementById("play-button").disabled = true;
+        socket.emit('play-request');
     
-        //socket.emit('play-request');
+        // Gray shades for brightness column
+        var brightnessCol = document.getElementById('brightness-column');
+        var brElements = brightnessCol.childNodes;
+        for (var i = 0; i < 13; i++) {
+            brElements[(i*2)+1].style.backgroundColor = "hsl(0,0%," + (i/12)*100 + "%)";
+        }
     });
     
     socket.on('draw-response', function (data) {

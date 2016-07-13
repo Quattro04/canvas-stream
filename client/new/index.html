@@ -30,7 +30,7 @@
         
     </head>
     
-    <body onload="initNew()">
+    <body onload="init()">
         <div class="container">
             <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
                 <div class="container">
@@ -45,77 +45,93 @@
                     </div>
                     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                         <ul class="nav navbar-nav">
-                            <li id="newS">
-                                <a href="/new">New Session</a>
+                            <li style="cursor:pointer;">
+                                <a onclick="liveSession()">Live Session</a>
                             </li>
                             <li>
-                                <a href="/records">Records</a>
+                                <a href="records.html">Records</a>
                             </li>
                         </ul>
                     </div>
                 </div>
             </nav>
             
-            <div class="col-md-12 page-header">
-                <h3>New Session</h4>
-            </div>
-      
-            <div class="col-md-6">
-                <div id="users-panel" class="panel panel-primary">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Users</h3>
-                    </div>
-                    <div id="users-panel-body" class="panel-body">
-                        <ul id="users-list" class="list-group">
-                        </ul>
-                    </div>
-                    <div id="user-panel-footer" class="panel-footer">
-                        <form id="username-input-form" class="input-group" style="width: 100%">
-                            <span class="input-group-addon" id="basic-addon1">Change Username:</span>
-                            <input id="username-input" type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon2">
-                        </form>
-                    </div> 
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div id="chat-panel" class="panel panel-primary">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Chat</h3>
-                    </div>
-                    <div id="chat-panel-body" class="panel-body">
-                    </div>
-                    <div id="chat-panel-footer" class="panel-footer">
-                        <form id="message-input-form" class="input-group" style="width: 100%">
-                            <input id="message-input" type="text" autocomplete="off" class="form-control" placeholder="Your Message" aria-describedby="basic-addon2">
-                        </form>
-                    </div> 
-                </div>
-            </div>
-            <div class="col-md-6">
-            </div> 
-            <div class="col-md-6">
-                <div class="col-md-5">
-                    <input type="name" class="form-control" id="nameInput" placeholder="Session Name">
-                </div>
-                <div class="col-md-5">
-                    <select id="sizeSel" class="selectpicker" style="width: 200px;">
-                        <option value="1">640 x 480 (4:3)</option>
-                        <option value="2">1024 x 768 (4:3)</option>
-                        <option value="3">640 x 360 (16:9)</option>
-                        <option value="4">960 x 540 (16:9)</option>
-                        <option value="5">1280 x 720 (16:9)</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-primary" onclick="createSession()" data-dismiss="modal">Create</button>
-                </div>
-            </div>
+            <div id="live-session">
             
-            
+                <div class="col-md-12 page-header" style="margin-top:10px;">
+                    <h3>Live Session</h4>
+                </div>
+                
+                <div class="col-md-4">
+                    <div id="join-panel" class="panel panel-primary">
+                        <div id="join-panel-heading" class="panel-heading clearfix">
+                            <h3 class="panel-title pull-left" style="padding-top:6px;"><b>Available Rooms</b></h3>
+                            <button id="refresh-button" type="button" class="btn btn-default btn-sm" style="float: right;" onclick="refreshRooms()"><span class="glyphicon glyphicon-refresh"></span></button>
+                        </div>
+                        <div id="join-panel-body" class="panel-body">
+                            <ul id="join-list" class="list-group">
+                            </ul>
+                        </div>
+                        <div id="join-panel-footer" class="panel-footer">
+                            <form id="new-room-form" class="input-group" style="width: 100%">
+                                <span class="input-group-addon" id="basic-addon1">Create Room:</span>
+                                <input id="new-room-input" type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon2">
+                            </form>
+                        </div> 
+                    </div>
+                </div>
+          
+                <div class="col-md-4">
+                    <div id="users-panel" class="panel panel-primary">
+                        <div id="users-panel-heading" class="panel-heading">
+                            <h3 class="panel-title" style="padding-top:6px;"><b>Users</b></h3>
+                        </div>
+                        <div id="users-panel-body" class="panel-body">
+                            <ul id="users-list" class="list-group">
+                            </ul>
+                        </div>
+                        <div id="user-panel-footer" class="panel-footer">
+                            <form id="username-input-form" class="input-group" style="width: 100%">
+                                <span class="input-group-addon" id="basic-addon1">Change Username:</span>
+                                <input id="username-input" type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon2">
+                            </form>
+                        </div> 
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div id="chat-panel" class="panel panel-primary">
+                        <div id="chat-panel-heading" class="panel-heading">
+                            <h3 class="panel-title" style="padding-top:6px;"><b>Chat</b></h3>
+                        </div>
+                        <div id="chat-panel-body" class="panel-body">
+                        </div>
+                        <div id="chat-panel-footer" class="panel-footer">
+                            <form id="message-input-form" class="input-group" style="width: 100%">
+                                <input id="message-input" type="text" autocomplete="off" class="form-control" placeholder="Your Message" aria-describedby="basic-addon2">
+                            </form>
+                        </div> 
+                    </div>
+                </div>
+                <div class="col-md-8">
+                </div> 
+                <div id="start-session-div" class="col-md-4" style="visibility:hidden;">
+                    <div class="col-md-9">
+                        <select id="sizeSel" class="selectpicker" style="width: 200px;">
+                            <option value="1">640 x 480 (4:3)</option>
+                            <option value="2">1024 x 768 (4:3)</option>
+                            <option value="3">640 x 360 (16:9)</option>
+                            <option value="4">960 x 540 (16:9)</option>
+                            <option value="5">1280 x 720 (16:9)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-primary" onclick="createSession()" data-dismiss="modal">Start</button>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <script src="/socket.io/socket.io.js"></script>
         <script src="/new/new.js"></script>
-        
     </body>
 </html>

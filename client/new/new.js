@@ -1,12 +1,24 @@
 var socket = io.connect();
 
 var socketID;
+var mySessionNum;
+var myUserNum;
 
-function initNew() {
-    socket.emit('new-user');
-    socket.on('your-ID', function (data) {
-        socketID = data.id;
-    });
+function init() {
+    socket.emit('join-refresh-req');
+    //socket.emit('new-session');
+    document.getElementById("users-panel-body").innerHTML = "<p style=\"margin-left:15px;margin-top:15px;\">Join or create a room</p>";
+    document.getElementById("chat-panel-body").innerHTML = "<p>Join or create a room</p>";
+    document.getElementById("username-input").disabled = true;
+    document.getElementById("message-input").disabled = true;
+}
+
+function join(val) {
+    socket.emit('join-room-req', { room: val });
+}
+
+function refreshRooms() {
+    socket.emit('join-refresh-req');
 }
 
 function createSession() {
@@ -45,49 +57,105 @@ function createSession() {
 
 
 $(document).ready(function() {
+    $('#new-room-form').submit(function() {
+        var name = document.getElementById("new-room-input").value;
+        document.getElementById("new-room-input").value = "";
+        socket.emit('new-session', { name : name });
+        return false;
+    });
+    
     $('#username-input-form').submit(function() {
         var name = document.getElementById("username-input").value;
         document.getElementById("username-input").value = "";
-        socket.emit('change-username', { name : name });
+        socket.emit('change-username', { name : name, session: mySessionNum, user: myUserNum });
         return false;
     });
     
     $('#message-input-form').submit(function() {
         var message = document.getElementById("message-input").value;
         document.getElementById("message-input").value = "";
-        socket.emit('send-message', { message : message });
+        socket.emit('send-message', { message : message, session: mySessionNum, user: myUserNum });
         return false;
     });
     
-    socket.on('update-users-response', function (data) {
+    socket.on('join-refresh-res', function(data) {
         
-        var list = document.getElementById("users-list");
+        if (data.sessions.length == 0) document.getElementById("join-panel-body").innerHTML = "<p style=\"margin-left:15px;margin-top:15px;\">No rooms available</p>";
+        else document.getElementById("join-panel-body").innerHTML = "<ul id=\"join-list\" class=\"list-group\"></ul>";
+        
+        /*var list = document.getElementById("join-list");
         while (list.hasChildNodes()) {   
             list.removeChild(list.firstChild);
-        }
-        
-        var keys = Object.keys(data.users);
-        
-        //$('#users-list').empty();
-        var i;
-        for (i = 0; i < keys.length; i++) {
-            
-            var li = document.createElement("LI");
-            if (keys[i] == socketID) {
-                li.innerHTML = "<b>"+data.users[keys[i]]+" (You)</b>";
+        }*/
+        var check;
+        // Go through sessions
+        for (var i = 0; i < data.sessions.length; i++) {
+            check = true;
+            // Go through users in that session and see if this user is in that session
+            for (var j = 0; j < data.sessions[i].users.length; j++) {
+                if (data.sessions[i].users[j].id == socketID) {
+                    
+                    mySessionNum = i;
+                    myUserNum = j;
+                    
+                    var name = data.sessions[i].sessionData.name;
+                    var li = document.createElement("LI");
+                    
+                    li.innerHTML = "<b>" + name + "</b> <span style=\"float:right;\"><small>Users in the room: " + data.sessions[i].users.length + "</small>" +
+                    "<span style=\"margin-left:48px;\">Joined</span></span>";
+                    
+                    li.classList.add("list-group-item");
+                    document.getElementById("join-list").appendChild(li);
+                    check = false;
+                    break;
+                }
             }
-            else {
-                li.innerHTML = data.users[keys[i]];
+            if (check) {
+                var name = data.sessions[i].sessionData.name;
+                var li = document.createElement("LI");
+                
+                li.innerHTML = "<b>" + name + "</b> <span style=\"float:right;\"><small>Users in the room: " + data.sessions[i].users.length + "</small>" +
+                "<button id=\"join-button\" type=\"button\" class=\"btn btn-primary\" style=\"margin-left:50px;\" onclick=\"join(" + i + 
+                ")\"><span class=\"glyphicon glyphicon-chevron-right\"></span></button></span>";
+                
+                li.classList.add("list-group-item");
+                document.getElementById("join-list").appendChild(li);
             }
-            li.classList.add("list-group-item");
-            document.getElementById("users-list").appendChild(li);
-            
-            
-            //$('#users-list').append(data.users[keys[i]]);
         }
     });
     
-    socket.on('send-message-response', function (data) {
+    socket.on('user-data', function (data) {
+        socketID = data.user.id;
+        document.getElementById("username-input").disabled = false;
+        document.getElementById("message-input").disabled = false;
+        document.getElementById("chat-panel-body").innerHTML = "";
+        
+        if (data.user.conductor) document.getElementById("start-session-div").style.visibility = "visible";
+        
+        socket.emit('join-refresh-req');
+    });
+    
+    socket.on('update-users', function (data) {
+        document.getElementById("users-panel-body").innerHTML = "<ul id=\"users-list\" class=\"list-group\"></ul>";
+        for (var i = 0; i < data.users.length; i++) {
+            
+            var li = document.createElement("LI");
+            if (data.users[i].id == socketID) {
+                if (data.users[i].conductor) li.innerHTML = "<font color=\"blue\"><b>" + data.users[i].name + "<small> (Conductor)</small></b></font>";
+                else li.innerHTML = "<font color=\"blue\"><b>" + data.users[i].name + "</b></font>";
+            }
+            else if (data.users[i].conductor) {
+                li.innerHTML = "<b>" + data.users[i].name + "<small> (Conductor)</small></b>";
+            }
+            else {
+                li.innerHTML = data.users[i].name;
+            }
+            li.classList.add("list-group-item");
+            document.getElementById("users-list").appendChild(li);
+        }
+    });
+    
+    socket.on('send-message-res', function (data) {
         var chat = document.getElementById("chat-panel-body");
         chat.innerHTML = chat.innerHTML + "<p>" + data.message + "</p>";
         $('#chat-panel-body').scrollTop($('#chat-panel-body').prop('scrollHeight'));
@@ -99,4 +167,8 @@ $(document).ready(function() {
         url = url + "canvas";
         window.location.href = url;
     });
+});
+
+$( window ).unload(function() {
+    socket.emit('leaving-new', { session: mySessionNum, user: myUserNum });
 });
