@@ -8,6 +8,7 @@ var socketID;
 var mySessionID;
 var myUserNum;
 var meConductor = false;
+var inSolo = false;
 
 function init() {
     
@@ -25,7 +26,7 @@ function liveSession() {
     document.getElementById("message-input").disabled = true;
     document.getElementById("new-room-input").disabled = false;
 }                                                               
-/*function liveSessionToHome() {
+function liveSessionToHome() {
     document.getElementById("main-live-session").style.display = "none";
     document.getElementById("main-homepage").style.display = "block";
     
@@ -33,8 +34,222 @@ function liveSession() {
         socket.emit('leaving-new', { sessionID: mySessionID, user: myUserNum });
     }
     mySessionID = null;
-}*/
-function liveCanvasToHome() {
+}
+function solo() {
+    clearText();
+    $('#solo-popup').modal('show');
+}
+function startSoloSession() {
+    var nameBox =  document.getElementById("solo-name-input");
+    if (nameBox.value == "" || nameBox.value == "Enter a name.") {
+        nameBox.value = "Enter a name.";
+        nameBox.style.color = "#ff4d4d";
+        return;
+    }
+    
+    $('#solo-popup').modal('hide');
+    $('#loading-popup').modal('show');
+    document.getElementById("play-button").disabled = true;
+    document.getElementById("undo-button").disabled = true;
+    document.getElementById("whole-pic-button").style.display = "none";
+    
+    var e = document.getElementById("soloSizeSel");
+    var res = e.options[e.selectedIndex].text;
+    var resArr = res.split(" ");
+
+    document.getElementById("main-homepage").style.display = "none";
+    document.getElementById("main-live-canvas").style.display = "block";
+        
+    socket.emit('solo-init');
+    
+    // Init canvas
+    
+    canvas = document.getElementById('canv');
+    
+    canvas.width = resArr[0];
+    canvas.height = resArr[2];
+    
+    canvasWidth = resArr[0];
+    canvasHeight = resArr[2];
+    
+    canvas.style.width = resArr[0] + "px";
+    canvas.style.height = resArr[2] + "px";
+    
+    ctx = canvas.getContext("2d");
+    
+    boudRect = canvas.getBoundingClientRect();
+    
+    canvas.addEventListener("mousemove", function (e) {
+        findxy('move', e);
+    }, false);
+    canvas.addEventListener("mousedown", function (e) {
+        findxy('down', e);
+    }, false);
+    canvas.addEventListener("mouseup", function (e) {
+        findxy('up', e);
+    }, false);
+    canvas.addEventListener("mouseout", function (e) {
+        findxy('out', e);
+    }, false);
+    
+    // Init color picker
+    
+    pickerCanvas = document.getElementById('color-picker-canvas');
+    
+    pickerCanvas.width = 256;
+    pickerCanvas.height = 560;
+    
+    var context = pickerCanvas.getContext('2d');
+    var imageObj = new Image();
+    
+    imageObj.onload = function() {
+        context.drawImage(imageObj, 0, 0);
+        context.crossOrigin = "Anonymous";
+        imageData = context.getImageData(0,0,256,560);
+    };
+    imageObj.crossOrigin="anonymous";
+    imageObj.src = '/images/colorpallete.jpg';
+    
+    pickerBoudRect = pickerCanvas.getBoundingClientRect();
+    
+    pickerCanvas.addEventListener("mousemove", function (e) {
+        pickColor('move', e);
+    }, false);
+    pickerCanvas.addEventListener("mousedown", function (e) {
+        pickColor('down', e);
+    }, false);
+    pickerCanvas.addEventListener("mouseup", function (e) {
+        pickColor('up', e);
+    }, false);
+    pickerCanvas.addEventListener("mouseout", function (e) {
+        pickColor('out', e);
+    }, false);
+    
+    // Gray shades for brightness column
+    
+    var brightnessCol = document.getElementById('brightness-column');
+    var brElements = brightnessCol.childNodes;
+    for (var i = 0; i < 13; i++) {
+        brElements[(i*2)+1].style.backgroundColor = "hsl(0,0%," + (i/12)*100 + "%)";
+    }
+    
+    inSolo = true;
+}
+function clearText() {
+    var nameBox =  document.getElementById("solo-name-input");
+    nameBox.value = "";
+    nameBox.style.color = "#000000";
+}
+function playButtonPressed() {
+    if (inSolo) {
+        if (playing) {
+            document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-play");
+            audio.pause();
+            playing = false;
+        }
+        else {
+            document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-pause");
+            audio.play();
+            playing = true;
+        }
+        soloMoveProgress();
+    }
+}
+function soloMoveProgress() {
+    var elem = document.getElementById("progBar");   
+    var idx = 0;
+    var width = 0;
+    var id = setInterval(frame, 250);
+    var i = 0;
+    
+    function frame() {
+        if (audio.currentTime == audio.duration) {
+            clearInterval(id);
+        } 
+        else {
+            /*for (var j = 0; j < layers.length; j++) {
+                while(layers[j][i].time < audio.currentTime) {
+                    draw(layers[j][i].x,layers[j][i].y,layers[j][i].tool,layers[j][i].color,layers[j][i].size,layers[j][i].angle,layers[j][i].clicked);
+                    i++;
+                }
+                i = 0;
+            }*/
+            width = (audio.currentTime / audio.duration) * 100;
+            elem.style.width = width + '%'; 
+        }
+    }
+}
+function undo() {
+    redrawAll(savedCurrTime);
+    document.getElementById("undo-button").disabled = true;
+}
+function redrawAll(time) {
+    var i = 0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //console.log(actions[i].time,time);
+    sprayNum = 0;
+    while (actions[i].time < time) {
+        draw(actions[i].x,actions[i].y,actions[i].tool,actions[i].color,actions[i].size,actions[i].angle,actions[i].clicked);
+        i++;
+    }
+    audio.currentTime = time;
+    actions = actions.slice(0,i);
+}
+function newLayer() {
+    if (actions.length == 0) return;
+
+    var temp = actions;
+    layers.push({actions:temp, visible: true});
+    actions = [];
+    
+    audio.currentTime = 0;
+    audio.pause();
+    sprayNum = 0;
+    playing = false;
+    document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-play");
+    document.getElementById("layerSel").innerHTML = "";
+    
+    for (var i = 0; i < layers.length; i++) {
+         document.getElementById("layerSel").innerHTML = document.getElementById("layerSel").innerHTML + "<option value=\"" + i + "\">" + (i+1) + "</option>";
+    }
+    document.getElementById("visible-checkbox-div").style.display = "block";
+    document.getElementById("visible-checkbox").checked = true;
+    document.getElementById("layerSel").selectedIndex = layers.length-1;
+}
+function selectedLayer() {
+    var e = document.getElementById("layerSel");
+    var layerNum = e.options[e.selectedIndex].value;
+    
+    document.getElementById("visible-checkbox").checked = layers[layerNum].visible;
+}
+function layerVisibilityChanged() {
+    var e = document.getElementById("layerSel");
+    var layerNum = e.options[e.selectedIndex].value;
+    
+    layers[layerNum].visible = document.getElementById("visible-checkbox").checked;
+    
+    // Draw all visible layers
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < layers.length; i++) {
+        if (!layers[i].visible) continue;
+        sprayNum = 0;
+        for (var j = 0; j < layers[i].actions.length; j++) {
+            draw(layers[i].actions[j].x,layers[i].actions[j].y,layers[i].actions[j].tool,layers[i].actions[j].color,
+            layers[i].actions[j].size,layers[i].actions[j].angle,layers[i].actions[j].clicked);
+        }
+    }
+    
+    // Draw current layer
+    if (actions.length != 0) {
+        sprayNum = 0;
+        for (var i = 0; i < actions.length; i++) {
+            draw(actions[i].x,actions[i].y,actions[i].tool,actions[i].color,actions[i].size,actions[i].angle,actions[i].clicked);
+        }
+    }
+    
+    
+}
+/*function liveCanvasToHome() {
     document.getElementById("main-live-canvas").style.display = "none";
     document.getElementById("main-homepage").style.display = "block";
     
@@ -42,7 +257,7 @@ function liveCanvasToHome() {
         if (meConductor) socket.emit('leaving-canvas', { sessionID: mySessionID });
     }
     mySessionID = null;
-}
+}*/
 function records() {
     document.getElementById("main-homepage").style.display = "none";
     document.getElementById("main-records").style.display = "block";
@@ -66,6 +281,7 @@ function refreshRooms() {
 }
 
 function createSession() {
+    $('#loading-popup').modal('show');
     
     var e = document.getElementById("sizeSel");
     var res = e.options[e.selectedIndex].text;
@@ -108,6 +324,10 @@ var stepsY = []
 var deltaX;
 var deltaY;
 
+var actions = [];
+var layers = [];
+var savedCurrTime;
+
 function pickColor(res, e) {
     
     if (res == 'down') {
@@ -127,6 +347,35 @@ function pickColor(res, e) {
             getColor(xCoord,yCoord);
         }
     }
+}
+
+function spectate() {
+    window.open("/spectate/index.html?ses=" + mySessionID + "&canW=" + canvasWidth + "&canH=" + canvasHeight, "", "width=" + canvasWidth + ",height=" + canvasHeight + ",resizable=0");
+}
+
+function parseURLParams(url) {
+    var queryStart = url.indexOf("?") + 1,
+        queryEnd   = url.indexOf("#") + 1 || url.length + 1,
+        query = url.slice(queryStart, queryEnd - 1),
+        pairs = query.replace(/\+/g, " ").split("&"),
+        parms = {}, i, n, v, nv;
+
+    if (query === url || query === "") {
+        return;
+    }
+
+    for (i = 0; i < pairs.length; i++) {
+        nv = pairs[i].split("=");
+        n = decodeURIComponent(nv[0]);
+        v = decodeURIComponent(nv[1]);
+
+        if (!parms.hasOwnProperty(n)) {
+            parms[n] = [];
+        }
+
+        parms[n].push(nv.length === 2 ? v : null);
+    }
+    return parms;
 }
 
 function getColor(xCoord,yCoord) {
@@ -586,19 +835,15 @@ function findxy(res, e) {
     if(!drawPercent) drawPercent = 1;
 
     if (res == 'down') {
+        savedCurrTime = audio.currentTime;
         
         x = e.clientX + document.body.scrollLeft - boudRect.left;
         y = e.clientY + document.body.scrollTop - boudRect.top;
         holding = true;
         
-        // Draw with selected tool
-            
-
-        draw(x,y,drawTool,drawColor,drawPercent,drawAngle,true);
-
+        // Solo Session --------------------------------------
         
-        // Send data to server
-        socket.emit('draw', {
+        var action = {
             x: x,
             y: y,
             tool: drawTool,
@@ -607,9 +852,30 @@ function findxy(res, e) {
             angle: drawAngle,
             clicked: true,
             time: audio.currentTime,
-            session: mySessionID,
-            conductor: meConductor
-        });
+        }
+        actions.push(action);
+        
+        // ---------------------------------------------------
+        
+        // Draw with selected tool
+
+        draw(x,y,drawTool,drawColor,drawPercent,drawAngle,true);
+        
+        // Send data to server if it's live session
+        if (!inSolo) {
+            socket.emit('draw', {
+                x: x,
+                y: y,
+                tool: drawTool,
+                color: drawColor,
+                size: drawPercent,
+                angle: drawAngle,
+                clicked: true,
+                time: audio.currentTime,
+                session: mySessionID,
+                conductor: meConductor
+            });
+        }
         
         savedDrawPercent = drawPercent;
         
@@ -619,8 +885,11 @@ function findxy(res, e) {
         
     }
     if (res == 'up' || res == "out") {
-        holding = false;
-        drawPercent = savedDrawPercent;
+        if (holding) {
+            holding = false;
+            document.getElementById("undo-button").disabled = false;
+            drawPercent = savedDrawPercent;
+        }
     }
     if (res == 'move') {
         
@@ -639,13 +908,6 @@ function findxy(res, e) {
             }
             
             if (drawTool == "rLine" || drawTool == "sprayLine") {
-               // if (drawTool == "rLine" || drawTool == "sprayLine") {
-                    /*if (lineCounter < 5) {
-                        lineCounter++;
-                        return;
-                    }
-                    lineCounter = 0;*/
-                //}
                 if (stepsCounter == 4) {
                     deltaX = x - stepsX[0];
                     deltaY = y - stepsY[0];
@@ -668,8 +930,24 @@ function findxy(res, e) {
                 }
             }
             
+            // Solo Session --------------------------------------
+        
+            var action = {
+                x: x,
+                y: y,
+                tool: drawTool,
+                color: drawColor,
+                size: drawPercent,
+                angle: drawAngle,
+                clicked: true,
+                time: audio.currentTime,
+            }
+            actions.push(action);
             
-            drawAndEmit(); 
+            // ---------------------------------------------------
+            
+            
+            drawAndEmit();
         }
         stepsCounter++;
         if (stepsCounter == 5) {
@@ -683,19 +961,21 @@ function findxy(res, e) {
 function drawAndEmit() {
     draw(x,y,drawTool,drawColor,drawPercent,drawAngle,false);
             
-    // Send data to server
-    socket.emit('draw', {
-        x: x,
-        y: y,
-        tool: drawTool,
-        color: drawColor,
-        size: drawPercent,
-        angle: drawAngle,
-        clicked: false,
-        time: audio.currentTime,
-        session: mySessionID,
-        conductor: meConductor
-    });
+    // Send data to server if it's live session
+    if (!inSolo) {
+        socket.emit('draw', {
+            x: x,
+            y: y,
+            tool: drawTool,
+            color: drawColor,
+            size: drawPercent,
+            angle: drawAngle,
+            clicked: false,
+            time: audio.currentTime,
+            session: mySessionID,
+            conductor: meConductor
+        });
+    }
 }
 
 var muted = false;
@@ -726,7 +1006,6 @@ function moveProgress() {
             width = (audio.currentTime / audio.duration) * 100;
             elem.style.width = width + '%'; 
         }
-        $("#audio-indicator").html(parseInt(audio.currentTime));
     }
 }
 
@@ -805,7 +1084,7 @@ function playRec(key,val) {
             socket.emit('get-record', { id: key });
             iSaved = 0;
             currTimeSaved = 0;
-            $('#rec-loading-popup').modal('show');
+            $('#loading-popup').modal('show');
             document.getElementById("rec" + val).setAttribute("class", "glyphicon glyphicon-pause");
             document.getElementById("rec" + playedVal).setAttribute("class", "glyphicon glyphicon-play");
             playedVal = val;
@@ -823,7 +1102,7 @@ function playRec(key,val) {
             socket.emit('get-record', { id: key });
             iSaved = 0;
             currTimeSaved = 0;
-            $('#rec-loading-popup').modal('show');
+            $('#loading-popup').modal('show');
             document.getElementById("rec" + val).setAttribute("class", "glyphicon glyphicon-pause");
         }
         else {
@@ -850,7 +1129,6 @@ function recMoveProgress() {
             width = (recAudio.currentTime / recAudio.duration) * 100;
             elem.style.width = width + '%'; 
         }
-        //$("#audio-indicator").html(parseInt(audio.currentTime));
     }
 }
 
@@ -1160,7 +1438,9 @@ $(document).ready(function() {
         for (var key in data.sessions) {
             check = true;
             
-            if (!data.sessions[key].show) continue;
+            if (!data.sessions[key].show) {
+                continue;
+            }
             noRooms = false;
             
             // Go through users in that session and see if this user is in that session
@@ -1243,8 +1523,11 @@ $(document).ready(function() {
     });
     
     socket.on('canvas-init', function (data) {
+        
         document.getElementById("main-live-session").style.display = "none";
         document.getElementById("main-live-canvas").style.display = "block";
+        
+        document.getElementById("undo-button").style.display = "none";
         
         // Init canvas
         
@@ -1322,7 +1605,6 @@ $(document).ready(function() {
         
         // Start audio
         
-        $("#audio-indicator").html('Loading...');
         document.getElementById("play-button").disabled = true;
         
         audio = new Audio(data.audio);
@@ -1333,21 +1615,25 @@ $(document).ready(function() {
         });
         
         audio.onended = function() {
-            liveCanvasToHome();
-            if (meConductor) socket.emit('audio-ended', { session: mySessionID });
+            //if (meConductor) socket.emit('audio-ended', { session: mySessionID });
+            window.location.href = "/"; 
         }
         document.getElementById("mute-button").disabled = true;
     });
     
     socket.on('play-ready-response', function (file) {
+        $('#loading-popup').modal('hide');
         document.getElementById("mute-button").disabled = false;
         audio.play();
         moveProgress();
     });
     
     socket.on('draw-response', function (data) {
-        if (meConductor && !data.conductor) draw(data.x,data.y,data.tool,data.color,data.size,data.angle,data.clicked);
-        else if (data.conductor && !meConductor) draw(data.x,data.y,data.tool,data.color,data.size,data.angle,data.clicked);
+        if (data.session == mySessionID) {
+            if (meConductor && !data.conductor) draw(data.x,data.y,data.tool,data.color,data.size,data.angle,data.clicked);
+            else if (data.conductor && !meConductor) draw(data.x,data.y,data.tool,data.color,data.size,data.angle,data.clicked);
+        }
+        
     });
     
     socket.on('records-res', function (data) {
@@ -1381,13 +1667,11 @@ $(document).ready(function() {
 
         recCtx.clearRect(0, 0, data.record.canW, data.record.canH);
 
-        //document.getElementById("rec-play-button").disabled = true;
-    
         recAudio = new Audio(data.record.audio);
         
         // When audio file is loaded
         recAudio.addEventListener('loadedmetadata', function() {
-            $('#rec-loading-popup').modal('hide');
+            $('#loading-popup').modal('hide');
             document.getElementById("rec-mute-button").disabled = false;
             document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
             playing = true;
@@ -1401,10 +1685,22 @@ $(document).ready(function() {
         }
         
     });
+    
+    socket.on('solo-init-res', function (data) {
+        randNums = data.randNums;
+        randAngle = data.randAngle;
+        
+        audio = new Audio(data.audio);
+        
+        audio.addEventListener('loadedmetadata', function() {
+            $('#loading-popup').modal('hide');
+            document.getElementById("play-button").disabled = false;
+        });
+    });
 });
 
 $( window ).unload(function() {
     if (mySessionID != null) {
-        socket.emit('leaving-new', { session: mySessionID, user: myUserNum });
+        socket.emit('leaving', { sessionID: mySessionID });
     }
 });

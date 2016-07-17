@@ -28,7 +28,6 @@ router.use(express.static(path.resolve(__dirname, 'client')));
 var sockets = [];
 //var usernames = {};
 //var usersInNew = 0;
-//var userNum = 0;
 
 var genNum = 0;
 var sessions = {};
@@ -73,6 +72,7 @@ io.on('connection', function(socket) {
         genNum++;
         var session = {
             users: [],
+            spectators: [],
             sessionData: {name: data.name, canW: 0, canH: 0},
             show: true,
             actions: []
@@ -120,26 +120,35 @@ io.on('connection', function(socket) {
         updateUsers(data.room);
     });
     
-    // LEAVE NEW PAGE
+    // LEAVING
     
-    socket.on('leaving-new', function(data) {
-        if (sessions.length == 0) return;
+    socket.on('leaving', function(data) {
         
-        var msg = "<font color=\"blue\"><i>" +  sessions[data.sessionID].users[data.user].name + " left the room</i></font>";
-        sendMessage(msg,data.sessionID);
+        var sesLen = Object.size(sessions);
+        
+        if (sesLen == 0) return;
+        
+        var userNum;
+        for (var i = 0; i < sessions[data.sessionID].users.length; i++) {
+            if (sessions[data.sessionID].users[i].id == socket.id) {
+                userNum = i;
+                break;
+            }
+        }
+        
+        if (sessions[data.sessionID].show) {
+            var msg = "<font color=\"blue\"><i>" +  sessions[data.sessionID].users[data.user].name + " left the room</i></font>";
+            sendMessage(msg,data.sessionID);
+        }
         sessions[data.sessionID].users.splice(data.user, 1);
         
         if (sessions[data.sessionID].users.length == 0) {
             delete sessions[data.sessionID];
             delete sessionsReady[data.sessionID];
         }
-        else {
+        else if (sessions[data.sessionID].show) {
             updateUsers(data.sessionID);
         }
-    });
-    
-    socket.on('leaving-canvas', function(data) {
-        delete sessions[data.sessionID];
     });
     
     // SEND MESSAGE, CHANGE USERNAME ON NEW
@@ -174,11 +183,17 @@ io.on('connection', function(socket) {
     // DRAW
     
     socket.on('draw', function(data) {
-        var usersInSession = sessions[data.session].users;
+        /*var usersInSession = sessions[data.session].users;
         for (var i = 0; i < usersInSession.length; i++) {
             var id = usersInSession[i].id;
             io.sockets.sockets[id].emit('draw-response', data);
         }
+        var specsInSession = sessions[data.session].spectators;
+        for (var i = 0; i < specsInSession.length; i++) {
+            var id = specsInSession[i];
+            io.sockets.sockets[id].emit('draw-response', data);
+        }*/
+        io.sockets.emit('draw-response', data);
         records[data.session].actions.push(data);
     });
     
@@ -210,6 +225,29 @@ io.on('connection', function(socket) {
         socket.emit('get-record-res', { record: records[data.id], randNums:randNums, randAngle:randAngle });
     });
     
+    // SPECTATE
+    
+    socket.on('spectate-req', function(data) {
+        socket.emit('spectate-res', { randNums: randNums, randAngle: randAngle });
+        sessions[data.sessionID].spectators.push(socket.id);
+    });
+    
+    socket.on('leaving-spec', function(data) {
+        if (!sessions[data.sessionID]) return;
+        
+        for (var i = 0; i < sessions[data.sessionID].spectators.length; i++) {
+            if (sessions[data.sessionID].spectators[i] == socket.id) {
+                sessions[data.sessionID].spectators.splice(i, 1);
+            }
+        }
+    });
+    
+    // SOLO
+    
+    socket.on('solo-init', function() {
+         socket.emit('solo-init-res', { audio: gsDataURL, randNums: randNums, randAngle: randAngle });
+    });
+    
     /*socket.on('canvas-shot', function(data) {
         socket.broadcast.emit('canvas-shot-response', data);
     });
@@ -226,6 +264,14 @@ io.on('connection', function(socket) {
     
     
 });
+
+Object.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
 
 function updateUsers(sessionID) {
     var usersInSession = sessions[sessionID].users;
