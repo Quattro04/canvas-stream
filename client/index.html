@@ -21,6 +21,11 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/css/bootstrap-select.min.css">
         <!-- Latest compiled and minified JavaScript -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/js/bootstrap-select.min.js"></script>
+        
+        <script src="https://4dbefa02675a4cdb7fc25d009516b060a84a3b4b.googledrive.com/host/0B6GWd_dUUTT8WjhzNlloZmZtdzA/ffmpeg_asm.js" async> </script>
+
+        
+        
     </head>
     
     <body>
@@ -142,7 +147,7 @@
                         </div>
                         <button id="mute-button" type="button" class="btn btn-default" onclick="muteButtonPressed()"><span id="mute-icon" class="glyphicon glyphicon-volume-up"></span></button>
                     </div>
-                    <div class="col-md-6">
+                    <div id="solo-bar" class="col-md-6" style="display:none">
                         <div style="width:320px;">
                             <div>
                                 <button id="undo-button" type="button" class="btn btn-primary" style="float:left;height:30px;margin-right:20px;" onclick="undo()"><span class="glyphicon glyphicon-arrow-left"></span></button>
@@ -308,14 +313,17 @@
                             </ul>
                         </div>
                     </div>
+                    
+                    <button type="button" id="prepare-dl-button" class="btn btn-primary" disabled="true" onclick="dlRecord()">Prepare for Download</button>
+                    
                 </div>
                 
                 <canvas id="rec-canv"></canvas>
-            
+                <!--<video id="vid" width="960" height="540" controls></video>!-->
             </div>
         </div>
         
-        <div id="loading-popup" class="modal fade bd-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+        <div id="loading-popup" class="modal fade bd-example-modal-sm" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -325,7 +333,22 @@
             </div>
         </div>
         
-        <div id="solo-popup" class="modal fade bd-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+        <div id="download-popup" class="modal fade bd-example-modal-sm" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="dl-modal-title">Loading, please wait...</h4>
+                        <h6 id="dl-modal-status"></h6>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="dl-dismiss-button" style="display:none" type="button" class="btn btn-default" onclick="goHome()">Home</button>
+                        <div id="dl-ready-div" style="float:right;margin-left:10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="solo-popup" class="modal fade bd-example-modal-sm" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -364,6 +387,8 @@
         </div>
         
         <script src="/socket.io/socket.io.js"></script>
+        <script src="/whammy-master/whammy.js"></script>
+        <script src="/RTCRecorder/RecordRTC.js"></script>
         <script src="/client.js"></script>
     </body>
 </html>

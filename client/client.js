@@ -14,6 +14,9 @@ function init() {
     
 }
 
+function goHome() {
+    window.location.href = "/";
+}
 function liveSession() {
     document.getElementById("main-homepage").style.display = "none";
     document.getElementById("main-live-session").style.display = "block";
@@ -52,6 +55,7 @@ function startSoloSession() {
     document.getElementById("play-button").disabled = true;
     document.getElementById("undo-button").disabled = true;
     document.getElementById("whole-pic-button").style.display = "none";
+    document.getElementById("solo-bar").style.display = "block";
     
     var e = document.getElementById("soloSizeSel");
     var res = e.options[e.selectedIndex].text;
@@ -1032,6 +1036,18 @@ var playing = false;
 var recRandAngle;
 var recRandNums;
 
+var download = false;
+var encoder;
+var encoderOutput;
+var dlUrl;
+var images = [];
+
+var audioData;
+
+var recorder;
+
+//var screenshots = [];
+
 var requestAnimationFrame =  
     window.requestAnimationFrame ||
     window.webkitRequestAnimationFrame ||
@@ -1061,14 +1077,28 @@ var animate = function () {
             recDraw(records[playedRecord].actions[i].x, records[playedRecord].actions[i].y,
                  records[playedRecord].actions[i].tool, records[playedRecord].actions[i].color,
                  records[playedRecord].actions[i].size, records[playedRecord].actions[i].angle, records[playedRecord].actions[i].clicked);
+                 
             i++;
         }
         
         // If the animation hasn't finished, repeat the step.
         if (i < iMax && playing) requestAnimationFrame(step);
         else {
+            
             iSaved = i;
             currTimeSaved = currTime;
+            
+            if (download) {
+                
+                var aBlob = dataURItoBlob(audioData);
+                
+                document.getElementById("dl-modal-status").innerHTML = "Finished recording canvas, started encoding...";
+                
+                recorder.stop(function(blob) {
+                    convertStreams(blob,aBlob);
+                    //document.getElementById("vid").src = URL.createObjectURL(blob);
+                });
+            }
         }
         
     };
@@ -1112,6 +1142,8 @@ function playRec(key,val) {
             animate();
         }
     }
+    document.getElementById("prepare-dl-button").disabled = false;
+    
 }
 
 function recMoveProgress() {
@@ -1142,6 +1174,186 @@ function muteRecordPressed() {
         document.getElementById("rec-mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
     }
 }
+
+function dlRecord() {
+    
+    $('#download-popup').modal('show');
+    download = true;
+    
+    iSaved = 0;
+    currTimeSaved = 0;
+    recAudio.currentTime = 0;
+    
+    recorder = new CanvasRecorder(recCanvas);
+    recorder.record();
+    
+    document.getElementById("dl-modal-status").innerHTML = "Started recording canvas";
+    
+    recCtx.fillStyle = "rgb(255,255,255)";
+    recCtx.fillRect(0, 0, recCanvasWidth, recCanvasHeight);
+    
+    playing = true;
+    animate();
+}
+
+
+
+
+
+
+
+
+
+
+//
+// Functions for encoding two seperate sources: canvas recording(webm) and audio into mp4 container -------------------------------------------
+//
+
+var worker;
+var workerPath = 'https://4dbefa02675a4cdb7fc25d009516b060a84a3b4b.googledrive.com/host/0B6GWd_dUUTT8WjhzNlloZmZtdzA/ffmpeg_asm.js';
+//var videoFile = !!navigator.mozGetUserMedia ? 'video.gif' : 'video.webm';
+
+function convertStreams(videoBlob, audioBlob) {
+    var vab;
+    var aab;
+    var buffersReady;
+    var workerReady;
+    var posted = false;
+
+    var fileReader1 = new FileReader();
+    fileReader1.onload = function() {
+        vab = this.result;
+
+        if (aab) buffersReady = true;
+
+        if (buffersReady && workerReady && !posted) postMessage();
+    };
+    var fileReader2 = new FileReader();
+    fileReader2.onload = function() {
+        aab = this.result;
+
+        if (vab) buffersReady = true;
+
+        if (buffersReady && workerReady && !posted) postMessage();
+    };
+
+    fileReader1.readAsArrayBuffer(videoBlob);
+    fileReader2.readAsArrayBuffer(audioBlob);
+
+    if (!worker) {
+        worker = processInWebWorker();
+    }
+
+    worker.onmessage = function(event) {
+        var message = event.data;
+        if (message.type == "ready") {
+            document.getElementById("dl-modal-status").innerHTML = "Finished recording...";
+            log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file has been loaded.');
+            workerReady = true;
+            if (buffersReady)
+                postMessage();
+        } else if (message.type == "stdout") {
+            document.getElementById("dl-modal-status").innerHTML = "Encoding audio and video to mp4, this may take a while...";
+            log(message.data);
+        } else if (message.type == "start") {
+            log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file received ffmpeg command.');
+        } else if (message.type == "done") {
+            log(JSON.stringify(message));
+
+            var result = message.data[0];
+            log(JSON.stringify(result));
+
+            var blob = new Blob([result.data], {
+                type: 'video/mp4'
+            });
+
+            //log(JSON.stringify(blob));
+
+            PostBlob(blob);
+        }
+    };
+    var postMessage = function() {
+        posted = true;
+        worker.postMessage({
+            type: 'command',
+            arguments: [
+                '-i', 'video.webm', 
+                '-i', 'audio.wav', 
+                '-c:v', 'mpeg4', 
+                '-c:a', 'vorbis', 
+                '-b:v', '6400k', 
+                '-b:a', '4800k', 
+                '-strict', 'experimental', 'output.mp4'
+            ],
+            files: [
+                {
+                    data: new Uint8Array(vab),
+                    name: "video.webm"
+                },
+                {
+                    data: new Uint8Array(aab),
+                    name: "audio.wav"
+                }
+            ]
+        });
+    }
+    
+}
+function processInWebWorker() {
+    var blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};' +
+        'onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files ' +
+        '|| [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});' +
+        'postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY'+
+        ' + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing' +
+        ' (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
+        type: 'application/javascript'
+    }));
+
+    var worker = new Worker(blob);
+    URL.revokeObjectURL(blob);
+    return worker;
+}
+function PostBlob(blob) {
+    document.getElementById("dl-modal-title").innerHTML = "All done, ready for download.";
+    document.getElementById("dl-modal-status").innerHTML = "";
+    document.getElementById("dl-dismiss-button").style.display = "inline";
+    document.getElementById("dl-ready-div").innerHTML = '<a href="' + URL.createObjectURL(blob) + 
+        '" target="_blank" download="File.mp4"><button type="button" class="btn btn-primary">Download</button></a>';
+    document.getElementById("dl-ready-div").setAttribute('contenteditable', 'false');
+}
+function log(message) {
+    console.log(message);
+}
+function dataURItoBlob(dataURI) {
+    // convert base64 to raw binary data held in a string
+    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+    var byteString = atob(dataURI.split(',')[1]);
+
+    // separate out the mime component
+    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+    // write the bytes of the string to an ArrayBuffer
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+
+    // write the ArrayBuffer to a blob, and you're done
+    var blob = new Blob([ab], {type: mimeString});
+    return blob;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 var sprayNum = 0;
 function recDraw(xC,yC,tool,color,size,angle,clicked) {
@@ -1527,8 +1739,6 @@ $(document).ready(function() {
         document.getElementById("main-live-session").style.display = "none";
         document.getElementById("main-live-canvas").style.display = "block";
         
-        document.getElementById("undo-button").style.display = "none";
-        
         // Init canvas
         
         canvas = document.getElementById('canv');
@@ -1668,6 +1878,9 @@ $(document).ready(function() {
         recCtx.clearRect(0, 0, data.record.canW, data.record.canH);
 
         recAudio = new Audio(data.record.audio);
+        //console.log(data.record.audio);
+        audioData = data.record.audio;
+        //document.getElementById("audio-player").src = data.record.audio;
         
         // When audio file is loaded
         recAudio.addEventListener('loadedmetadata', function() {
