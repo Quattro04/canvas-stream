@@ -10,6 +10,9 @@ var myUserNum;
 var meConductor = false;
 var inSolo = false;
 
+var soloName;
+var soloBG;
+
 function init() {
     
 }
@@ -17,6 +20,87 @@ function init() {
 function goHome() {
     window.location.href = "/";
 }
+
+function uploadMusic() {
+    $('#upload-popup').modal('show');
+     socket.emit('music-refresh-req');
+}
+
+var upload = false;
+function selectedFile(obj) {
+    if (!obj.files[0]) {
+        document.getElementById('upload-button').disabled = true;
+        return;
+    }
+    var fileType = obj.files[0].type;
+    if (fileType.indexOf('audio') == -1) {
+        document.getElementById('upload-button').disabled = true;
+        return;
+    }
+    
+    var player = document.getElementById('audio-player');
+    var reader = new FileReader();
+    reader.onload = (
+        function(audio) {
+            return function(e) {
+                audio.src = e.target.result;
+            ;};
+        })(player);
+    reader.addEventListener('load', function() {
+        if (!upload) document.getElementById('upload-button').disabled = false;
+        //document.getElementById("audio-player").play();
+    });
+    reader.readAsDataURL(obj.files[0]);
+}
+
+function uploadFile() {
+    var name;
+    
+    // Extract filename from input
+    var fullPath = document.getElementById('audio-input').value;
+    if (fullPath) {
+        var startIndex = (fullPath.indexOf('\\') >= 0 ? fullPath.lastIndexOf('\\') : fullPath.lastIndexOf('/'));
+        var filename = fullPath.substring(startIndex);
+        if (filename.indexOf('\\') === 0 || filename.indexOf('/') === 0) {
+            filename = filename.substring(1);
+        }
+        name = filename;
+    }
+    upload = true;
+    var audio = document.getElementById('audio-player').src;
+    document.getElementById('loading-icon').style.visibility = "visible";
+    document.getElementById('upload-button').disabled = true;
+    socket.emit('file-upload',{ file:audio, name:name });
+}
+
+var prevMusic;
+var selectedMusic;
+function selectMusic(val) {
+    
+    if (prevMusic == val) return;
+    
+    document.getElementById(val).style.backgroundColor = "#99C3D1";
+    if (prevMusic) {
+        document.getElementById(prevMusic).style.backgroundColor = "#FFFFFF";
+    }
+    prevMusic = val;
+    selectedMusic = val.slice(-1);
+    document.getElementById("start-session-button").disabled = false;
+}
+var soloPrevMusic;
+var soloSelectedMusic;
+function soloSelectMusic(val) {
+    if (soloPrevMusic == val) return;
+    
+    document.getElementById(val).style.backgroundColor = "#99C3D1";
+    if (soloPrevMusic) {
+        document.getElementById(soloPrevMusic).style.backgroundColor = "#FFFFFF";
+    }
+    soloPrevMusic = val;
+    soloSelectedMusic = val.slice(-1);
+    document.getElementById("start-solo-session-button").disabled = false;
+}
+
 function liveSession() {
     document.getElementById("main-homepage").style.display = "none";
     document.getElementById("main-live-session").style.display = "block";
@@ -28,6 +112,7 @@ function liveSession() {
     document.getElementById("username-input").disabled = true;
     document.getElementById("message-input").disabled = true;
     document.getElementById("new-room-input").disabled = false;
+    document.getElementById("footer").style.visibility = "hidden";
 }                                                               
 function liveSessionToHome() {
     document.getElementById("main-live-session").style.display = "none";
@@ -41,6 +126,7 @@ function liveSessionToHome() {
 function solo() {
     clearText();
     $('#solo-popup').modal('show');
+    socket.emit('music-refresh-req');
 }
 function startSoloSession() {
     var nameBox =  document.getElementById("solo-name-input");
@@ -50,6 +136,8 @@ function startSoloSession() {
         return;
     }
     
+    soloName = nameBox.value;
+    
     $('#solo-popup').modal('hide');
     $('#loading-popup').modal('show');
     document.getElementById("play-button").disabled = true;
@@ -57,14 +145,17 @@ function startSoloSession() {
     document.getElementById("whole-pic-button").style.display = "none";
     document.getElementById("solo-bar").style.display = "block";
     
-    var e = document.getElementById("soloSizeSel");
+    var e = document.getElementById("solo-size-selector");
     var res = e.options[e.selectedIndex].text;
     var resArr = res.split(" ");
-
+    
+    e = document.getElementById("solo-bg-selector");
+    soloBG = e.options[e.selectedIndex].value;
+    
     document.getElementById("main-homepage").style.display = "none";
     document.getElementById("main-live-canvas").style.display = "block";
         
-    socket.emit('solo-init');
+    socket.emit('solo-init',{ audio:soloSelectedMusic });
     
     // Init canvas
     
@@ -80,6 +171,15 @@ function startSoloSession() {
     canvas.style.height = resArr[2] + "px";
     
     ctx = canvas.getContext("2d");
+    
+    if (soloBG == 1) {
+        ctx.fillStyle = "rgb(0,0,0)";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
+    else if (soloBG == 2) {
+        ctx.fillStyle = "rgb(255,255,255)";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
     
     boudRect = canvas.getBoundingClientRect();
     
@@ -138,6 +238,7 @@ function startSoloSession() {
     }
     
     inSolo = true;
+    document.getElementById("footer").style.visibility = "hidden";
 }
 function clearText() {
     var nameBox =  document.getElementById("solo-name-input");
@@ -184,20 +285,45 @@ function soloMoveProgress() {
     }
 }
 function undo() {
-    redrawAll(savedCurrTime);
+    savedActionIdx--;
+    audio.currentTime = savedCurrTime;
+    
+    actions = actions.slice(0,savedActionIdx);
+    actionIdx = savedActionIdx;
+
+    redrawAll();
     document.getElementById("undo-button").disabled = true;
 }
 function redrawAll(time) {
-    var i = 0;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    //console.log(actions[i].time,time);
-    sprayNum = 0;
-    while (actions[i].time < time) {
-        draw(actions[i].x,actions[i].y,actions[i].tool,actions[i].color,actions[i].size,actions[i].angle,actions[i].clicked);
-        i++;
+    
+    // Draw all visible layers
+    
+    if (soloBG == 1) {
+        ctx.fillStyle = "rgb(0,0,0)";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     }
-    audio.currentTime = time;
-    actions = actions.slice(0,i);
+    else if (soloBG == 2) {
+        ctx.fillStyle = "rgb(255,255,255)";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
+    
+    for (var i = 0; i < layers.length; i++) {
+        if (!layers[i].visible) continue;
+        sprayNum = 0;
+        for (var j = 0; j < layers[i].actions.length; j++) {
+            draw(layers[i].actions[j].x,layers[i].actions[j].y,layers[i].actions[j].tool,layers[i].actions[j].color,
+            layers[i].actions[j].size,layers[i].actions[j].angle,layers[i].actions[j].clicked);
+        }
+    }
+    
+    // Draw current layer
+    if (actions.length != 0) {
+        
+        sprayNum = 0;
+        for (var i = 0; i < actions.length; i++) {
+            draw(actions[i].x,actions[i].y,actions[i].tool,actions[i].color,actions[i].size,actions[i].angle,actions[i].clicked);
+        }
+    }
 }
 function newLayer() {
     if (actions.length == 0) return;
@@ -205,6 +331,7 @@ function newLayer() {
     var temp = actions;
     layers.push({actions:temp, visible: true});
     actions = [];
+    actionIdx = 0;
     
     audio.currentTime = 0;
     audio.pause();
@@ -216,7 +343,7 @@ function newLayer() {
     for (var i = 0; i < layers.length; i++) {
          document.getElementById("layerSel").innerHTML = document.getElementById("layerSel").innerHTML + "<option value=\"" + i + "\">" + (i+1) + "</option>";
     }
-    document.getElementById("visible-checkbox-div").style.display = "block";
+    //document.getElementById("visible-checkbox-div").style.display = "block";
     document.getElementById("visible-checkbox").checked = true;
     document.getElementById("layerSel").selectedIndex = layers.length-1;
 }
@@ -232,42 +359,34 @@ function layerVisibilityChanged() {
     
     layers[layerNum].visible = document.getElementById("visible-checkbox").checked;
     
-    // Draw all visible layers
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (var i = 0; i < layers.length; i++) {
-        if (!layers[i].visible) continue;
-        sprayNum = 0;
-        for (var j = 0; j < layers[i].actions.length; j++) {
-            draw(layers[i].actions[j].x,layers[i].actions[j].y,layers[i].actions[j].tool,layers[i].actions[j].color,
-            layers[i].actions[j].size,layers[i].actions[j].angle,layers[i].actions[j].clicked);
-        }
-    }
-    
-    // Draw current layer
-    if (actions.length != 0) {
-        sprayNum = 0;
-        for (var i = 0; i < actions.length; i++) {
-            draw(actions[i].x,actions[i].y,actions[i].tool,actions[i].color,actions[i].size,actions[i].angle,actions[i].clicked);
-        }
-    }
-    
-    
+    redrawAll();
 }
-/*function liveCanvasToHome() {
-    document.getElementById("main-live-canvas").style.display = "none";
-    document.getElementById("main-homepage").style.display = "block";
-    
-    if (mySessionID != null) {
-        if (meConductor) socket.emit('leaving-canvas', { sessionID: mySessionID });
+function finishSolo() {
+    $('#loading-popup').modal('show');
+    if (actions.length != 0) {
+        var temp = actions;
+        layers.push({actions:temp, visible: true});
+        actions = [];
     }
-    mySessionID = null;
-}*/
+    
+    // Join actions of all layers and sort them by time of draw
+    var joinedActions = [];
+    for (var i = 0; i < layers.length; i++) {
+        joinedActions = joinedActions.concat(layers[i].actions);
+    }
+    joinedActions.sort(function(a, b){return a.time-b.time});
+    
+    socket.emit('upload-record', { name:soloName, audio:soloSelectedMusic, canW:canvasWidth, canH:canvasHeight, bg:soloBG, actions:joinedActions });
+    
+    goHome();
+}
 function records() {
     document.getElementById("main-homepage").style.display = "none";
     document.getElementById("main-records").style.display = "block";
     document.getElementById("rec-mute-button").disabled = true;
     
     recCanvas = document.getElementById('rec-canv');
+    document.getElementById("footer").style.visibility = "hidden";
     
     socket.emit('records-req');
 }
@@ -287,11 +406,14 @@ function refreshRooms() {
 function createSession() {
     $('#loading-popup').modal('show');
     
-    var e = document.getElementById("sizeSel");
+    var e = document.getElementById("size-selector");
     var res = e.options[e.selectedIndex].text;
     var resArr = res.split(" ");
     
-    socket.emit('start-session', { session: mySessionID, width: resArr[0], height: resArr[2] });
+    e = document.getElementById("bg-selector");
+    res = e.options[e.selectedIndex].value;
+    
+    socket.emit('start-session', { session: mySessionID, width: resArr[0], height: resArr[2], audioID:selectedMusic, bg:res });
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -331,6 +453,8 @@ var deltaY;
 var actions = [];
 var layers = [];
 var savedCurrTime;
+var actionIdx = 0;
+var savedActionIdx = 0;
 
 function pickColor(res, e) {
     
@@ -839,7 +963,6 @@ function findxy(res, e) {
     if(!drawPercent) drawPercent = 1;
 
     if (res == 'down') {
-        savedCurrTime = audio.currentTime;
         
         x = e.clientX + document.body.scrollLeft - boudRect.left;
         y = e.clientY + document.body.scrollTop - boudRect.top;
@@ -847,18 +970,23 @@ function findxy(res, e) {
         
         // Solo Session --------------------------------------
         
-        var action = {
-            x: x,
-            y: y,
-            tool: drawTool,
-            color: drawColor,
-            size: drawPercent,
-            angle: drawAngle,
-            clicked: true,
-            time: audio.currentTime,
+        if (inSolo) {
+            actionIdx++;
+            savedActionIdx = actionIdx;
+            savedCurrTime = audio.currentTime;
+            
+            var action = {
+                x: x,
+                y: y,
+                tool: drawTool,
+                color: drawColor,
+                size: drawPercent,
+                angle: drawAngle,
+                clicked: true,
+                time: audio.currentTime,
+            }
+            actions.push(action);
         }
-        actions.push(action);
-        
         // ---------------------------------------------------
         
         // Draw with selected tool
@@ -935,19 +1063,22 @@ function findxy(res, e) {
             }
             
             // Solo Session --------------------------------------
-        
-            var action = {
-                x: x,
-                y: y,
-                tool: drawTool,
-                color: drawColor,
-                size: drawPercent,
-                angle: drawAngle,
-                clicked: true,
-                time: audio.currentTime,
-            }
-            actions.push(action);
             
+            if (inSolo) {
+                actionIdx++;
+            
+                var action = {
+                    x: x,
+                    y: y,
+                    tool: drawTool,
+                    color: drawColor,
+                    size: drawPercent,
+                    angle: drawAngle,
+                    clicked: false,
+                    time: audio.currentTime,
+                }
+                actions.push(action);
+            }
             // ---------------------------------------------------
             
             
@@ -1026,12 +1157,13 @@ var recCanvasWidth;
 var recCanvasHeight;
 
 var canvasData;
-var records;
 var playedRecord;
-var playedVal;
+var recPlayedID;
 
 var recAudio;
 var playing = false;
+var record;
+var recordsNum = 0;
 
 var recRandAngle;
 var recRandNums;
@@ -1063,7 +1195,8 @@ var currTimeSaved = 0;
 var animate = function () {
     // The calculations required for the step function
     var start = new Date().getTime();
-    var iMax = records[playedRecord].actions.length;
+    var iMax = record.actions.length;
+    console.log(iMax);
     var i = iSaved;
 
     var step = function() {
@@ -1073,12 +1206,16 @@ var animate = function () {
         
         // Draw all actions until currTime
         
-        while (i < iMax && records[playedRecord].actions[i].time <= currTime/1000) {
-            recDraw(records[playedRecord].actions[i].x, records[playedRecord].actions[i].y,
-                 records[playedRecord].actions[i].tool, records[playedRecord].actions[i].color,
-                 records[playedRecord].actions[i].size, records[playedRecord].actions[i].angle, records[playedRecord].actions[i].clicked);
+        while (i < iMax && record.actions[i].time <= currTime/1000) {
+            recDraw(record.actions[i].x, record.actions[i].y, record.actions[i].tool, record.actions[i].color,
+                 record.actions[i].size, record.actions[i].angle, record.actions[i].clicked);
                  
             i++;
+        }
+        
+        if (download) {
+            encoder.add(recCtx);
+            document.getElementById("dl-modal-status").innerHTML = 'Encoded ' + i + '/' + iMax + ' frames...';
         }
         
         // If the animation hasn't finished, repeat the step.
@@ -1090,14 +1227,30 @@ var animate = function () {
             
             if (download) {
                 
+                document.getElementById("dl-modal-status").innerHTML = 'Started to compile recorded frames...';
+                
+                encoderOutput = encoder.compile();
+                
+                var binaryData = [];
+                binaryData.push(encoderOutput);
+                var vBlob = new Blob(binaryData);
+                
                 var aBlob = dataURItoBlob(audioData);
+                
+                document.getElementById("dl-modal-status").innerHTML = "Encoding audio and video to mp4, this may take a while...";
+                
+                convertStreams(vBlob,aBlob);
+                
+                //document.getElementById("vid").src = URL.createObjectURL(new Blob(binaryData));
+                
+                /*var aBlob = dataURItoBlob(audioData);
                 
                 document.getElementById("dl-modal-status").innerHTML = "Finished recording canvas, started encoding...";
                 
                 recorder.stop(function(blob) {
                     convertStreams(blob,aBlob);
                     //document.getElementById("vid").src = URL.createObjectURL(blob);
-                });
+                });*/
             }
         }
         
@@ -1106,7 +1259,7 @@ var animate = function () {
     return step();
 };
 
-function playRec(key,val) {
+function playRec(key,id) {
     
     if (playing) {
         if (playedRecord != key) {
@@ -1115,35 +1268,33 @@ function playRec(key,val) {
             iSaved = 0;
             currTimeSaved = 0;
             $('#loading-popup').modal('show');
-            document.getElementById("rec" + val).setAttribute("class", "glyphicon glyphicon-pause");
-            document.getElementById("rec" + playedVal).setAttribute("class", "glyphicon glyphicon-play");
-            playedVal = val;
+            document.getElementById('rec' + id).setAttribute("class", "glyphicon glyphicon-pause");
+            document.getElementById(recPlayedID).setAttribute("class", "glyphicon glyphicon-play");
+            recPlayedID = id;
         }
         else {
-            document.getElementById("rec" + val).setAttribute("class", "glyphicon glyphicon-play");
+            document.getElementById('rec' + id).setAttribute("class", "glyphicon glyphicon-play");
         }
         recAudio.pause();
         playing = false;
     }
     else {
         if (playedRecord != key) {
-            playedVal = val;
+            recPlayedID = id;
             playedRecord = key;
             socket.emit('get-record', { id: key });
             iSaved = 0;
             currTimeSaved = 0;
             $('#loading-popup').modal('show');
-            document.getElementById("rec" + val).setAttribute("class", "glyphicon glyphicon-pause");
+            document.getElementById('rec' + id).setAttribute("class", "glyphicon glyphicon-pause");
         }
         else {
-            document.getElementById("rec" + val).setAttribute("class", "glyphicon glyphicon-pause");
+            document.getElementById('rec' + id).setAttribute("class", "glyphicon glyphicon-pause");
             recAudio.play();
             playing = true;
             animate();
         }
     }
-    document.getElementById("prepare-dl-button").disabled = false;
-    
 }
 
 function recMoveProgress() {
@@ -1175,25 +1326,10 @@ function muteRecordPressed() {
     }
 }
 
-function dlRecord() {
-    
-    $('#download-popup').modal('show');
+function dlRecord(key) {
     download = true;
-    
-    iSaved = 0;
-    currTimeSaved = 0;
-    recAudio.currentTime = 0;
-    
-    recorder = new CanvasRecorder(recCanvas);
-    recorder.record();
-    
-    document.getElementById("dl-modal-status").innerHTML = "Started recording canvas";
-    
-    recCtx.fillStyle = "rgb(255,255,255)";
-    recCtx.fillRect(0, 0, recCanvasWidth, recCanvasHeight);
-    
-    playing = true;
-    animate();
+    $('#download-popup').modal('show');
+    socket.emit('get-record', { id: key });
 }
 
 
@@ -1247,13 +1383,11 @@ function convertStreams(videoBlob, audioBlob) {
     worker.onmessage = function(event) {
         var message = event.data;
         if (message.type == "ready") {
-            document.getElementById("dl-modal-status").innerHTML = "Finished recording...";
             log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file has been loaded.');
             workerReady = true;
             if (buffersReady)
                 postMessage();
         } else if (message.type == "stdout") {
-            document.getElementById("dl-modal-status").innerHTML = "Encoding audio and video to mp4, this may take a while...";
             log(message.data);
         } else if (message.type == "start") {
             log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file received ffmpeg command.');
@@ -1282,7 +1416,7 @@ function convertStreams(videoBlob, audioBlob) {
                 '-c:v', 'mpeg4', 
                 '-c:a', 'vorbis', 
                 '-b:v', '6400k', 
-                '-b:a', '4800k', 
+                '-b:a', '4800k',
                 '-strict', 'experimental', 'output.mp4'
             ],
             files: [
@@ -1300,12 +1434,47 @@ function convertStreams(videoBlob, audioBlob) {
     
 }
 function processInWebWorker() {
-    var blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};' +
-        'onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files ' +
-        '|| [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});' +
-        'postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY'+
-        ' + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing' +
-        ' (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
+    var blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");' +
+            'var now = Date.now;' +
+            'function print(text) {' +
+                'postMessage({"type" : "stdout","data" : text});' +
+    
+            '};' +
+            'onmessage = function(event) {' +
+                'var message = event.data;' +
+                'if (message.type === "command") {' +
+                    'var Module = {' +
+                        'print: print,' +
+                        'printErr: print,' +
+                        'files: message.files || [],' +
+                        'arguments: message.arguments || [],' +
+                        //'TOTAL_MEMORY: message.TOTAL_MEMORY || false' +
+                        'TOTAL_MEMORY: 500000000' +
+                    '};' +
+                    'postMessage({' +
+                        '"type" : "start",' +
+                        '"data" : Module.arguments.join(" ")});' +
+                    'postMessage({"' +
+                        'type" : "stdout",' +
+                        '"data" : "Received command: " + Module.arguments.join(" ") + ((Module.TOTAL_MEMORY) ? ". Processing with " + Module.TOTAL_MEMORY + " bits." : "")' +
+                    '});' +
+                    'var time = now();' +
+                    'var result = ffmpeg_run(Module);' +
+                    'var totalTime = now() - time;' +
+                    'postMessage({' +
+                        '"type" : "stdout",' +
+                        '"data" : "Finished processing (took " + totalTime + "ms)"' +
+                    '});' +
+                    'postMessage({' +
+                        '"type" : "done",' +
+                        '"data" : result,' +
+                        '"time" : totalTime' +
+                    '});' +
+                '}};' +
+                'postMessage({' +
+                    '"type" : "ready"' +
+                '});'],
+    {
         type: 'application/javascript'
     }));
 
@@ -1316,9 +1485,10 @@ function processInWebWorker() {
 function PostBlob(blob) {
     document.getElementById("dl-modal-title").innerHTML = "All done, ready for download.";
     document.getElementById("dl-modal-status").innerHTML = "";
+    document.getElementById("dl-modal-message").innerHTML = "";
     document.getElementById("dl-dismiss-button").style.display = "inline";
     document.getElementById("dl-ready-div").innerHTML = '<a href="' + URL.createObjectURL(blob) + 
-        '" target="_blank" download="File.mp4"><button type="button" class="btn btn-primary">Download</button></a>';
+        '" target="_blank" download="' + record.name + '.mp4"><button type="button" class="btn btn-primary">Download</button></a>';
     document.getElementById("dl-ready-div").setAttribute('contenteditable', 'false');
 }
 function log(message) {
@@ -1638,6 +1808,29 @@ $(document).ready(function() {
         return false;
     });
     
+    socket.on('music-refresh', function (data) {
+        
+        // Clear music list and music selectors
+        document.getElementById('music-list').innerHTML = '';
+        document.getElementById('music-picker').innerHTML = '';
+        document.getElementById('solo-music-picker').innerHTML = '';
+
+        // Update music list and music selectors
+        for(var i = 0; i < data.names.length; i++) {
+            var name = data.names[i];
+            document.getElementById('music-list').innerHTML = document.getElementById('music-list').innerHTML + 
+                '<li class="list-group-item">' + name + '</li>';
+            document.getElementById('music-picker').innerHTML = document.getElementById('music-picker').innerHTML + 
+                '<li class="list-group-item m-picker" id="music' + i + '" onclick="selectMusic(this.id)">' + name + '</li>';
+            document.getElementById('solo-music-picker').innerHTML = document.getElementById('solo-music-picker').innerHTML + 
+                '<li class="list-group-item m-picker" id="s-music' + i + '" onclick="soloSelectMusic(this.id)">' + name + '</li>';
+
+        }
+
+        document.getElementById('loading-icon').style.visibility = "hidden";
+        upload = false;
+    });
+    
     socket.on('join-refresh-res', function(data) {
         
         var noRooms = true;
@@ -1702,7 +1895,10 @@ $(document).ready(function() {
         
         if (data.user.conductor) {
             document.getElementById("start-session-div").style.visibility = "visible";
+            
             meConductor = true;
+            
+            socket.emit('music-refresh-req');
         }
         
         socket.emit('join-refresh-req');
@@ -1759,6 +1955,14 @@ $(document).ready(function() {
         
         boudRect = canvas.getBoundingClientRect();
         
+        if (data.session.sessionData.bg == 1) {
+            ctx.fillStyle = "rgb(0,0,0)";
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        }
+        else if (data.session.sessionData.bg == 2) {
+            ctx.fillStyle = "rgb(255,255,255)";
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        }
         canvas.addEventListener("mousemove", function (e) {
             findxy('move', e);
         }, false);
@@ -1847,19 +2051,25 @@ $(document).ready(function() {
     });
     
     socket.on('records-res', function (data) {
-        records = data.records;
-        var i = 0;
-        for (var key in data.records) {
-            var li = document.createElement("LI");
-            li.innerHTML = "<b>" + data.records[key].name + "</b><button type=\"button\" class=\"btn btn-primary\" style=\"padding-top:0;height:20px;float:right;\" value=\"" + i +
-            "\" onclick=\"playRec(" + key + ",this.value)\"><small><span id=\"rec" + i + "\" class=\"glyphicon glyphicon-play\"></span></small></button>";
-            li.classList.add("list-group-item");
-            document.getElementById("rec-list").appendChild(li);
-            i++;
-        }
+        
+        var li = document.createElement("LI");
+        li.innerHTML = '<h5 style="float:left;"><b>' + data.name + 
+        
+            '</b></h5><button type="button" class="btn btn-primary" style="float:right;margin-left:10px;" onclick="playRec(\'' + 
+                data.key + '\',' + recordsNum + ')"><span id="rec' + recordsNum + '" class="glyphicon glyphicon-play"></span></button>' +
+                
+            '</b><button type="button" class="btn btn-primary" style="float:right;" onclick="dlRecord(\'' + 
+                data.key + '\')"><span class="glyphicon glyphicon-download-alt"></span></button>';
+                
+        li.classList.add('list-group-item');
+        li.classList.add('rec-items');
+        
+        document.getElementById("rec-list").appendChild(li);
+        
+        recordsNum++;
     });
     
-    socket.on('get-record-res', function (data) {
+    socket.on('get-rec-canvas-ready', function (data) {
         
         randNums = data.randNums;
         randAngle = data.randAngle;
@@ -1875,28 +2085,41 @@ $(document).ready(function() {
         
         recCtx = recCanvas.getContext("2d");
 
-        recCtx.clearRect(0, 0, data.record.canW, data.record.canH);
-
-        recAudio = new Audio(data.record.audio);
-        //console.log(data.record.audio);
-        audioData = data.record.audio;
-        //document.getElementById("audio-player").src = data.record.audio;
-        
-        // When audio file is loaded
-        recAudio.addEventListener('loadedmetadata', function() {
-            $('#loading-popup').modal('hide');
-            document.getElementById("rec-mute-button").disabled = false;
-            document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
-            playing = true;
-            recAudio.play();
-            recMoveProgress();
-            animate();
-        });
-        
-        recAudio.onended = function() {
-            document.getElementById("rec-mute-button").disabled = true;
+        if (data.record.bg == 1) {
+            recCtx.fillStyle = "rgb(0,0,0)";
+            recCtx.fillRect(0, 0, recCanvasWidth, recCanvasHeight);
         }
+        else if (data.record.bg == 2) {
+            recCtx.fillStyle = "rgb(255,255,255)";
+            recCtx.fillRect(0, 0, recCanvasWidth, recCanvasHeight);
+        }
+
+        record = data.record;
+        audioData = data.record.audio;
         
+        if (download) {
+            iSaved = 0;
+            currTimeSaved = 0;
+            
+            encoder = new Whammy.Video(15); 
+            
+            document.getElementById("dl-modal-status").innerHTML = "Started recording canvas";
+            
+            playing = true;
+            animate();
+        }
+        else {
+            recAudio = new Audio(data.record.audio);
+            recAudio.addEventListener('loadedmetadata', function() {
+                $('#loading-popup').modal('hide');
+                document.getElementById("rec-mute-button").disabled = false;
+                document.getElementById("mute-icon").setAttribute("class", "glyphicon glyphicon-volume-up");
+                playing = true;
+                recAudio.play();
+                recMoveProgress();
+                animate();
+            });
+        }
     });
     
     socket.on('solo-init-res', function (data) {
@@ -1913,7 +2136,7 @@ $(document).ready(function() {
 });
 
 $( window ).unload(function() {
-    if (mySessionID != null) {
+    if (mySessionID) {
         socket.emit('leaving', { sessionID: mySessionID });
     }
 });

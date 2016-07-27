@@ -45,6 +45,11 @@ reader.onload = function(e) {
 }
 reader.readAsDataURL(new File('public/audio/greensleeves.mp3'));
 
+// MUSIC
+var music = [];
+var musicData = [];
+
+
 //var rand = require('random-seed').create();
 var randAngle = [];
 var randNums = [];
@@ -65,6 +70,18 @@ io.on('connection', function(socket) {
         sockets.splice(sockets.indexOf(socket), 1);
         //updateUsers(socket);
     });
+    
+    // AUDIO FILES
+    
+    socket.on('file-upload', function(data) {
+        music.push(data.name);
+        musicData.push(data.file);
+        socket.emit('music-refresh', { names:music })
+    });
+    
+    socket.on('music-refresh-req', function() {
+        socket.emit('music-refresh', { names:music })
+    });
   
     // NEW SESSION
   
@@ -73,7 +90,7 @@ io.on('connection', function(socket) {
         var session = {
             users: [],
             spectators: [],
-            sessionData: {name: data.name, canW: 0, canH: 0},
+            sessionData: {name: data.name, canW: 0, canH: 0, bg: ''},
             show: true,
             actions: []
         };
@@ -86,9 +103,10 @@ io.on('connection', function(socket) {
         
         var record = {
             name: sessions[genNum].sessionData.name,
-            audio: gsDataURL,
+            audio: '',
             canW: 0,
             canH: 0,
+            bg: '',
             actions: []
         }
         records[genNum] = record;
@@ -137,7 +155,7 @@ io.on('connection', function(socket) {
         }
         
         if (sessions[data.sessionID].show) {
-            var msg = "<font color=\"blue\"><i>" +  sessions[data.sessionID].users[data.user].name + " left the room</i></font>";
+            var msg = "<font color=\"blue\"><i>" +  sessions[data.sessionID].users[userNum].name + " left the room</i></font>";
             sendMessage(msg,data.sessionID);
         }
         sessions[data.sessionID].users.splice(data.user, 1);
@@ -172,27 +190,20 @@ io.on('connection', function(socket) {
     socket.on('start-session', function(data) {
         sessions[data.session].sessionData.canW = data.width;
         sessions[data.session].sessionData.canH = data.height;
+        sessions[data.session].sessionData.bg = data.bg;
         sessions[data.session].show = false;
         
         records[data.session].canW = data.width;
         records[data.session].canH = data.height;
+        records[data.session].bg = data.bg;
+        records[data.session].audio = musicData[data.audioID];
         
-        startSession(data.session);
+        startSession(data.session,data.audioID);
     });
     
     // DRAW
     
     socket.on('draw', function(data) {
-        /*var usersInSession = sessions[data.session].users;
-        for (var i = 0; i < usersInSession.length; i++) {
-            var id = usersInSession[i].id;
-            io.sockets.sockets[id].emit('draw-response', data);
-        }
-        var specsInSession = sessions[data.session].spectators;
-        for (var i = 0; i < specsInSession.length; i++) {
-            var id = specsInSession[i];
-            io.sockets.sockets[id].emit('draw-response', data);
-        }*/
         io.sockets.emit('draw-response', data);
         records[data.session].actions.push(data);
     });
@@ -218,11 +229,26 @@ io.on('connection', function(socket) {
     // RECORDS
     
     socket.on('records-req', function() {
-        socket.emit('records-res', { records: records });
+        
+        for (var key in records) {
+            socket.emit('records-res', { name:records[key].name, key:key });
+        }
     });
     
     socket.on('get-record', function(data) {
-        socket.emit('get-record-res', { record: records[data.id], randNums:randNums, randAngle:randAngle });
+        socket.emit('get-rec-canvas-ready', { record: records[data.id], randNums:randNums, randAngle:randAngle });
+    });
+    
+    socket.on('upload-record', function(data) {
+        var record = {
+            name: data.name,
+            audio: musicData[data.audio],
+            canW: data.canW,
+            canH: data.canH,
+            bg: data.bg,
+            actions: data.actions
+        }
+        records[socket.id] = record;
     });
     
     // SPECTATE
@@ -244,8 +270,8 @@ io.on('connection', function(socket) {
     
     // SOLO
     
-    socket.on('solo-init', function() {
-         socket.emit('solo-init-res', { audio: gsDataURL, randNums: randNums, randAngle: randAngle });
+    socket.on('solo-init', function(data) {
+         socket.emit('solo-init-res', { audio:musicData[data.audio], randNums:randNums, randAngle:randAngle });
     });
     
     /*socket.on('canvas-shot', function(data) {
@@ -289,7 +315,7 @@ function sendMessage(message,sessionID) {
     }
 }
 
-function startSession(sessionID) {
+function startSession(sessionID,audioID) {
     var usersInSession = sessions[sessionID].users;
     for (var i = 0; i < usersInSession.length; i++) {
         var id = usersInSession[i].id;
@@ -297,7 +323,7 @@ function startSession(sessionID) {
             session: sessions[sessionID],
             randNums: randNums,
             randAngle: randAngle,
-            audio: gsDataURL
+            audio: musicData[audioID]
         });
     }
 }

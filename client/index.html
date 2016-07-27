@@ -35,24 +35,25 @@
             <div class="container">
                 
                 <div class="col-md-12 page-header">
-                    <h3>Home Page</h4>
+                    <h3 style="float:left;">Home Page</h4>
+                    <button type="button" id="ul-music-button" class="btn btn-primary" style="float:right;margin-top:20px;" onclick="uploadMusic()">Upload Music</button>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-4 portfolio-item">
-                        <a href="#"><img class="img-responsive" src="http://placehold.it/700x400" alt=""></a>
+                        <a onclick="liveSession()" href="#"><img class="img-responsive" src="images/live-banner.jpg" alt=""></a>
                         <h3><a onclick="liveSession()" href="#">Live Session</a></h3>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
+                        <p>Join your drawing skills with other users to produce a true masterpiece.</p>
                     </div>
                     <div class="col-md-4 portfolio-item">
-                        <a href="#"><img class="img-responsive" src="http://placehold.it/700x400" alt=""></a>
-                        <h3><a onclick="solo()" href="#">Solo</a></h3>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
+                        <a onclick="solo()" href="#"><img class="img-responsive" src="images/solo-banner.jpg" alt=""></a>
+                        <h3><a onclick="solo()" href="#">Solo Session</a></h3>
+                        <p>Choose audio, resolution and start drawing, you can even undo the most recent action.</p>
                     </div>
                     <div class="col-md-4 portfolio-item">
-                        <a href="#"><img class="img-responsive" src="http://placehold.it/700x400" alt=""></a>
+                        <a onclick="records()" href="#"><img class="img-responsive" src="images/records-banner.jpg" alt=""></a>
                         <h3><a onclick="records()" href="#">Records</a></h3>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
+                        <p>Rewatch and download yours or other people's visualizations.</p>
                     </div>
                 </div>
             </div>
@@ -116,20 +117,37 @@
                         </div> 
                     </div>
                 </div>
-                <div class="col-md-8">
-                </div> 
-                <div id="start-session-div" class="col-md-4" style="visibility:hidden;">
-                    <div class="col-md-9">
-                        <select id="sizeSel" class="selectpicker" style="width: 200px;">
-                            <option value="1">640 x 480 (4:3)</option>
-                            <option value="2">1024 x 768 (4:3)</option>
-                            <option value="3">640 x 360 (16:9)</option>
-                            <option value="4">960 x 540 (16:9)</option>
-                            <option value="5">1280 x 720 (16:9)</option>
-                        </select>
+                <div class="col-md-4">
+                </div>
+                <div id="start-session-div" class="col-md-8" style="visibility:hidden;">
+                    <div class="form-group" style="float:left;">
+                        <label for="music-picker">Audio</label>
+                        <div style="height:150px;overflow-y:auto;">
+                            <ul id="music-picker" class="list-group">
+                            </ul>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <button type="button" class="btn btn-primary" onclick="createSession()" data-dismiss="modal">Start</button>
+                    <div class="form-group" style="float:right;width:50%;">
+                        <label for="bg-selector">Background</label>
+                        <select id="bg-selector" class="selectpicker">
+                            <option value="1">Black</option>
+                            <option value="2">White</option>
+                        </select>
+                        <label style="margin-top:5px;"for="size-selector">Resolution</label>
+                        <div>
+                            <div style="width:75%;float:left;">
+                                <select id="size-selector" class="selectpicker">
+                                    <option value="1">640 x 480 (4:3)</option>
+                                    <option value="2">1024 x 768 (4:3)</option>
+                                    <option value="3">640 x 360 (16:9)</option>
+                                    <option value="4">960 x 540 (16:9)</option>
+                                    <option value="5">1280 x 720 (16:9)</option>
+                                </select>
+                            </div>
+                            <div style="width:20%;float:right;">
+                                <button id="start-session-button" style="float:right;" type="button" disabled="true" class="btn btn-primary" onclick="createSession()">Start</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,28 +159,33 @@
                 
                 <div class="col-md-12">
                     <div class="col-md-6">
-                        <button id="play-button" type="button" class="play btn btn-default" onclick="playButtonPressed()"><span id="play-icon" class="glyphicon glyphicon-play"></span></button>
+                        <button id="play-button" type="button" class="play btn btn-default" onclick="playButtonPressed()">
+                            <span id="play-icon" class="glyphicon glyphicon-play"></span>
+                        </button>
                         <div id="progBar-div" class="progress">
                             <div id="progBar" class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <button id="mute-button" type="button" class="btn btn-default" onclick="muteButtonPressed()"><span id="mute-icon" class="glyphicon glyphicon-volume-up"></span></button>
+                        <button id="mute-button" type="button" class="btn btn-default" onclick="muteButtonPressed()">
+                            <span id="mute-icon" class="glyphicon glyphicon-volume-up"></span>
+                        </button>
                     </div>
                     <div id="solo-bar" class="col-md-6" style="display:none">
-                        <div style="width:320px;">
-                            <div>
-                                <button id="undo-button" type="button" class="btn btn-primary" style="float:left;height:30px;margin-right:20px;" onclick="undo()"><span class="glyphicon glyphicon-arrow-left"></span></button>
-                                <div style="float:left;">
-                                    <span style="float:left;height:30px;margin-right:10px;"><h5><b>Layers:</b></h5></span>
-                                    <select id="layerSel" style="float:left;width:70px;height:30px;margin-right:10px;" onchange="selectedLayer()" class="form-control">
-                                    </select>
-                                    <button id="new-layer-button" type="button" class="btn btn-primary" style="height:30px;" onclick="newLayer()"><span class="glyphicon glyphicon-plus"></span></button>
-                                </div>
-                                
-                            </div>
-                            <div id="visible-checkbox-div" onclick="layerVisibilityChanged()" class="checkbox" style="margin-top:0;height:30px;float:right;display:none">
-                                <label style="margin-left:10px;"><h5><input id="visible-checkbox" type="checkbox" value=""><b>Visible</b></h5></label>
-                            </div>
+                        <button id="undo-button" type="button" class="btn btn-primary" style="float:left;margin-right:20px;display:inline;" onclick="undo()">
+                            <span class="glyphicon glyphicon-arrow-left"></span>
+                        </button>
+                        <h5 style="display:inline;"><b>Layers:</b></h5>
+                        <select id="layerSel" style="display:inline;width:70px;margin-right:10px;" onchange="selectedLayer()" class="form-control">
+                        </select>
+                        <button id="new-layer-button" type="button" class="btn btn-primary" style="display:inline;" onclick="newLayer()">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
+                        <div id="visible-checkbox-div" onclick="layerVisibilityChanged()" class="checkbox" disabled="true" style="display:inline">
+                            <label style="margin-left:10px;margin-right:10px;"><h5><input id="visible-checkbox" type="checkbox" value=""><b>Visible</b></h5></label>
                         </div>
+                        <button id="finish-solo-button" type="button" class="btn btn-primary" style="display:inline;" onclick="finishSolo()">
+                            <span class="glyphicon glyphicon-save"></span>
+                        </button>
+                        
                     </div>
                 </div>
             </div>
@@ -303,7 +326,7 @@
                     </div>
                 </div>
           
-                <div id="rec-side-panel" class="col-sm-2">
+                <div id="rec-side-panel" class="col-sm-3">
                     <div class="panel panel-primary">
                         <div class="panel-heading">
                             <h3 class="panel-title">Records</h3>
@@ -313,13 +336,11 @@
                             </ul>
                         </div>
                     </div>
-                    
-                    <button type="button" id="prepare-dl-button" class="btn btn-primary" disabled="true" onclick="dlRecord()">Prepare for Download</button>
-                    
                 </div>
-                
-                <canvas id="rec-canv"></canvas>
-                <!--<video id="vid" width="960" height="540" controls></video>!-->
+                <div class="col-sm-9">
+                    <canvas id="rec-canv"></canvas>
+                    <!--<video id="vid" width="960" height="540" controls></video>!-->
+                </div>
             </div>
         </div>
         
@@ -333,11 +354,36 @@
             </div>
         </div>
         
+        <div id="upload-popup" class="modal fade bd-example-modal-md" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Audio Files</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div style="height:200px;overflow-y:auto;">
+                            <ul id="music-list" class="list-group">
+                            </ul>
+                        </div>
+                        <audio style="width:100%;margin-top:20px;" id="audio-player" autoplay controls></audio>
+                    </div>
+                    <div class="modal-footer">
+                        <input id="audio-input" style="display:inline;float:left;width:400px;margin-top:5px;" type="file" onchange="selectedFile(this)" />
+                        <span id="loading-icon" style="visibility: hidden;" class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> 
+                        <button id="upload-button" type="button" class="btn btn-primary" disabled="true" onclick="uploadFile()">Upload</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.getElementById('audio-player').pause()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div id="download-popup" class="modal fade bd-example-modal-sm" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h4 class="modal-title" id="dl-modal-title">Loading, please wait...</h4>
+                        <h6 id="dl-modal-message">Please wait while the video is enconding. Stay focused on this page, otherwise the process will stop. 
+                            Download button will be available at the bottom of this popup when it's ready.</h6>
                         <h6 id="dl-modal-status"></h6>
                     </div>
                     <div class="modal-footer">
@@ -354,41 +400,55 @@
                     <div class="modal-header">
                         <h4 class="modal-title">New Solo Session</h4>
                     </div>
-                    <div class="modal-body" style="height:110px;padding-left:0;">
-                        <div class="col-md-12">
-                            <div class="col-md-3">
-                                <h5>Name:</h5>
-                            </div>
-                            <div class="col-md-9">
-                                <input id="solo-name-input" type="text" autocomplete="off" class="form-control" onclick="clearText()"/>
+                    <div class="modal-body" style="height:380px;">
+                        <div class="form-group">
+                            <label for="solo-name-input">Name</label>
+                            <input id="solo-name-input" type="text" autocomplete="off" class="form-control" onclick="clearText()"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="solo-music-picker">Audio</label>
+                            <div style="height:100px;overflow-y:auto;">
+                                <ul id="solo-music-picker" class="list-group">
+                                </ul>
                             </div>
                         </div>
-                        <div class="col-md-12" style="margin-top:10px;">
-                            <div class="col-md-3">
-                                <h5>Size:</h5>
-                            </div>
-                            <div class="col-md-9">
-                                <select id="soloSizeSel" class="selectpicker">
-                                    <option value="1">640 x 480 (4:3)</option>
-                                    <option value="2">1024 x 768 (4:3)</option>
-                                    <option value="3">640 x 360 (16:9)</option>
-                                    <option value="4">960 x 540 (16:9)</option>
-                                    <option value="5">1280 x 720 (16:9)</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label for="solo-bg-selector">Background</label>
+                            <select id="solo-bg-selector" class="selectpicker">
+                                <option value="1">Black</option>
+                                <option value="2">White</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="solo-size-selector">Resolution</label>
+                            <select id="solo-size-selector" class="selectpicker">
+                                <option value="1">640 x 480 (4:3)</option>
+                                <option value="2">1024 x 768 (4:3)</option>
+                                <option value="3">640 x 360 (16:9)</option>
+                                <option value="4">960 x 540 (16:9)</option>
+                                <option value="5">1280 x 720 (16:9)</option>
+                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" onclick="startSoloSession()">Start</button>
+                        <button id="start-solo-session-button" type="button" class="btn btn-primary" disabled="true" onclick="startSoloSession()">Start</button>
                     </div>
                 </div>
             </div>
         </div>
         
+        <footer id="footer" class="footer">
+            <div class="container">
+                <p style="margin-top:20px;margin-bottom:5px;" class="text-muted"><span >© </span>Matija Jeras, FRI UNI, 2016</p>
+            </div>
+        </footer>
+        
+        
+        
         <script src="/socket.io/socket.io.js"></script>
         <script src="/whammy-master/whammy.js"></script>
-        <script src="/RTCRecorder/RecordRTC.js"></script>
+        <!--<script src="/RTCRecorder/RecordRTC.js"></script>!-->
         <script src="/client.js"></script>
     </body>
 </html>
