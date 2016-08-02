@@ -396,6 +396,7 @@ function records() {
 }*/
 
 function join(val) {
+    document.getElementById("join-error").style.visibility = "hidden";
     socket.emit('join-room-req', { room: val });
 }
 
@@ -1790,6 +1791,14 @@ $(document).ready(function() {
     $('#new-room-form').submit(function() {
         var name = document.getElementById("new-room-input").value;
         document.getElementById("new-room-input").value = "";
+        
+        if (name.length > 10) {
+            document.getElementById("join-error").style.visibility = "visible";
+            return false;
+        }
+        
+        document.getElementById("join-error").style.visibility = "hidden";
+        
         socket.emit('new-session', { name : name });
         return false;
     });
@@ -1797,6 +1806,14 @@ $(document).ready(function() {
     $('#username-input-form').submit(function() {
         var name = document.getElementById("username-input").value;
         document.getElementById("username-input").value = "";
+        
+        if (name.length > 10) {
+            document.getElementById("username-error").style.visibility = "visible";
+            return false;
+        }
+        
+        document.getElementById("username-error").style.visibility = "hidden";
+        
         socket.emit('change-username', { name : name, session: mySessionID, user: myUserNum });
         return false;
     });

@@ -3,7 +3,7 @@
 <!doctype html>
 <html lang="en" ng-app>
     <head>
-        <title>Canvas</title>
+        <title>Vizualia</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         <!-- BOOTSTRAP Latest compiled and minified CSS -->
@@ -22,9 +22,11 @@
         <!-- Latest compiled and minified JavaScript -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/js/bootstrap-select.min.js"></script>
         
+        <!-- FFmpeg converter -->
         <script src="https://4dbefa02675a4cdb7fc25d009516b060a84a3b4b.googledrive.com/host/0B6GWd_dUUTT8WjhzNlloZmZtdzA/ffmpeg_asm.js" async> </script>
-
         
+        <!-- favicon -->
+        <link rel="shortcut icon" href="/images/favicon.ico" />
         
     </head>
     
@@ -82,7 +84,8 @@
                                 <span class="input-group-addon" id="basic-addon1">Create Room:</span>
                                 <input id="new-room-input" type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon2">
                             </form>
-                        </div> 
+                        </div>
+                        <span id="join-error" class="label label-danger" style="visibility:hidden">Room name too long.</span>
                     </div>
                 </div>
           
@@ -100,7 +103,8 @@
                                 <span class="input-group-addon" id="basic-addon1">Change Username:</span>
                                 <input id="username-input" type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon2">
                             </form>
-                        </div> 
+                        </div>
+                        <span id="username-error" class="label label-danger" style="visibility:hidden">Username too long.</span>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -188,6 +192,9 @@
                         
                     </div>
                 </div>
+            </div>
+            <div>
+                <img src="/images/tool-templates.jpg" style="margin-bottom:10px;margin-left:20px;"/>
             </div>
             <div id="left-panel">
                 <div id="tool-column" class="btn-group-vertical" role="group">
