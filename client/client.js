@@ -1054,12 +1054,12 @@ function findxy(res, e) {
             
             if (drawTool == "brushDec" || drawTool == "brushDecSprayed") {
                 if (drawPercent > 1) {
-                    drawPercent = drawPercent - 0.01;
+                    drawPercent = drawPercent - 0.02;
                 }
             }
             else if (drawTool == "brushInc" || drawTool == "brushIncSprayed") {
                 if (drawPercent < savedDrawPercent) {
-                    drawPercent = drawPercent + 0.01;
+                    drawPercent = drawPercent + 0.02;
                 }
             }
             
