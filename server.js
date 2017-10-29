@@ -37,14 +37,6 @@ var records = {};
 
 var socketsReady = 0;
 
-// Read as DataURL
-var gsDataURL;
-var reader = new FileReader();
-reader.onload = function(e) {
-    gsDataURL = reader.result;
-}
-reader.readAsDataURL(new File('public/audio/greensleeves.mp3'));
-
 // MUSIC
 var music = [];
 var musicData = [];
@@ -55,14 +47,16 @@ var randAngle = [];
 var randNums = [];
 //rand.initState();
 var i;
-for (i = 0; i < 10000; i++) {
-    randAngle.push(Math.random() * Math.PI*2);
-    randNums.push(Math.random() * 1000);
+for (i = 0; i < 100000; i++) {
+    //randAngle.push(Math.random() * Math.PI*2);
+    randNums.push(Math.random());
 }
 
 io.set('log level', 1);
 
 io.on('connection', function(socket) {
+    
+    console.log("Client connected: " + socket.id);
 
     sockets.push(socket);
     //console.log(socket.id);
@@ -74,6 +68,9 @@ io.on('connection', function(socket) {
     // AUDIO FILES
     
     socket.on('file-upload', function(data) {
+        
+        console.log("Music '" + data.name + "' uploaded by " + socket.id);
+        
         music.push(data.name);
         musicData.push(data.file);
         socket.emit('music-refresh', { names:music })
@@ -271,9 +268,13 @@ io.on('connection', function(socket) {
     // SOLO
     
     socket.on('solo-init', function(data) {
-         socket.emit('solo-init-res', { audio:musicData[data.audio], randNums:randNums, randAngle:randAngle });
+        socket.emit('solo-init-res', { audio:musicData[data.audio], randNums:randNums});
+        //socket.emit('solo-init-res', { audio:musicData[data.audio], randNums:randNums, randAngle:randAngle });
     });
     
+    socket.on('song-data-req', function(data) {
+        socket.emit('song-data-res', { audio:musicData[data.val] });
+    });
     /*socket.on('canvas-shot', function(data) {
         socket.broadcast.emit('canvas-shot-response', data);
     });

@@ -10,8 +10,7 @@ var myUserNum;
 var meConductor = false;
 var inSolo = false;
 
-var soloName;
-var soloBG;
+var noMusic = false;
 
 function init() {
     
@@ -48,7 +47,6 @@ function selectedFile(obj) {
         })(player);
     reader.addEventListener('load', function() {
         if (!upload) document.getElementById('upload-button').disabled = false;
-        //document.getElementById("audio-player").play();
     });
     reader.readAsDataURL(obj.files[0]);
 }
@@ -67,10 +65,14 @@ function uploadFile() {
         name = filename;
     }
     upload = true;
-    var audio = document.getElementById('audio-player').src;
+    var audioSrc = document.getElementById('audio-player').src;
     document.getElementById('loading-icon').style.visibility = "visible";
     document.getElementById('upload-button').disabled = true;
-    socket.emit('file-upload',{ file:audio, name:name });
+    socket.emit('file-upload',{ file:audioSrc, name:name });
+}
+
+function songClicked(val) {
+    socket.emit('song-data-req',{ val:val });
 }
 
 var prevMusic;
@@ -98,7 +100,7 @@ function soloSelectMusic(val) {
     }
     soloPrevMusic = val;
     soloSelectedMusic = val.slice(-1);
-    document.getElementById("start-solo-session-button").disabled = false;
+    document.getElementById("start-text-editor-button").disabled = false;
 }
 
 function liveSession() {
@@ -124,62 +126,51 @@ function liveSessionToHome() {
     mySessionID = null;
 }
 function solo() {
-    clearText();
     $('#solo-popup').modal('show');
     socket.emit('music-refresh-req');
+    document.body.style.overflow = 'hidden';
 }
-function startSoloSession() {
-    var nameBox =  document.getElementById("solo-name-input");
-    if (nameBox.value == "" || nameBox.value == "Enter a name.") {
-        nameBox.value = "Enter a name.";
-        nameBox.style.color = "#ff4d4d";
-        return;
+function startSoloSession(check) {
+    
+    if (!check) {
+        $('#loading-popup').modal('show');
+        $('#text-popup').modal('hide');
+        socket.emit('solo-init',{ audio:soloSelectedMusic });
+        
+        encoder = new Whammy.Video(10);
+    
+        var id = setInterval(frame, 100);
+        var j = 0;
+        function frame() {
+            j++;
+            encoder.add(textCtx);
+            if (j == textDuration * 10) clearInterval(id); 
+        }
+    }
+    else {
+        noMusic = true;
+        $('#solo-popup').modal('hide');
     }
     
-    soloName = nameBox.value;
     
-    $('#solo-popup').modal('hide');
-    $('#loading-popup').modal('show');
-    document.getElementById("play-button").disabled = true;
-    document.getElementById("undo-button").disabled = true;
-    document.getElementById("whole-pic-button").style.display = "none";
-    document.getElementById("solo-bar").style.display = "block";
-    
-    var e = document.getElementById("solo-size-selector");
-    var res = e.options[e.selectedIndex].text;
-    var resArr = res.split(" ");
-    
-    e = document.getElementById("solo-bg-selector");
-    soloBG = e.options[e.selectedIndex].value;
-    
+    document.getElementById("solo-row").style.display = "inline";
     document.getElementById("main-homepage").style.display = "none";
     document.getElementById("main-live-canvas").style.display = "block";
-        
-    socket.emit('solo-init',{ audio:soloSelectedMusic });
-    
+
     // Init canvas
     
     canvas = document.getElementById('canv');
     
-    canvas.width = resArr[0];
-    canvas.height = resArr[2];
+    canvas.width = 1280;
+    canvas.height = 720;
     
-    canvasWidth = resArr[0];
-    canvasHeight = resArr[2];
+    canvasWidth = 1280;
+    canvasHeight = 720;
     
-    canvas.style.width = resArr[0] + "px";
-    canvas.style.height = resArr[2] + "px";
+    canvas.style.width = "1280px";
+    canvas.style.height = "720px";
     
     ctx = canvas.getContext("2d");
-    
-    if (soloBG == 1) {
-        ctx.fillStyle = "rgb(0,0,0)";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    }
-    else if (soloBG == 2) {
-        ctx.fillStyle = "rgb(255,255,255)";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    }
     
     boudRect = canvas.getBoundingClientRect();
     
@@ -200,8 +191,8 @@ function startSoloSession() {
     
     pickerCanvas = document.getElementById('color-picker-canvas');
     
-    pickerCanvas.width = 256;
-    pickerCanvas.height = 560;
+    pickerCanvas.width = 440;
+    pickerCanvas.height = 720;
     
     var context = pickerCanvas.getContext('2d');
     var imageObj = new Image();
@@ -209,7 +200,7 @@ function startSoloSession() {
     imageObj.onload = function() {
         context.drawImage(imageObj, 0, 0);
         context.crossOrigin = "Anonymous";
-        imageData = context.getImageData(0,0,256,560);
+        imageData = context.getImageData(0,0,440,720);
     };
     imageObj.crossOrigin="anonymous";
     imageObj.src = '/images/colorpallete.jpg';
@@ -229,171 +220,197 @@ function startSoloSession() {
         pickColor('out', e);
     }, false);
     
+    // Init audio stamp canvas
+    
+    var stampCanvas = document.getElementById('audio-stamp-canvas');
+    
+    stampCanvas.width = $("#audio-stamp-canvas").width();
+    stampCanvas.height = $("#audio-stamp-canvas").height();
+    var stampCanvasCtx = stampCanvas.getContext('2d');
+    
+    stampCanvas.addEventListener("mousedown", function (e) {
+        stampAudio(stampCanvasCtx, e);
+    }, false);
+    
+    
     // Gray shades for brightness column
     
-    var brightnessCol = document.getElementById('brightness-column');
+    var brightnessCol = document.getElementById('brightness-row');
     var brElements = brightnessCol.childNodes;
     for (var i = 0; i < 13; i++) {
         brElements[(i*2)+1].style.backgroundColor = "hsl(0,0%," + (i/12)*100 + "%)";
     }
     
     inSolo = true;
+    redrawAll();
     document.getElementById("footer").style.visibility = "hidden";
 }
-function clearText() {
-    var nameBox =  document.getElementById("solo-name-input");
-    nameBox.value = "";
-    nameBox.style.color = "#000000";
-}
-function playButtonPressed() {
-    if (inSolo) {
-        if (playing) {
-            document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-play");
-            audio.pause();
-            playing = false;
-        }
-        else {
-            document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-pause");
-            audio.play();
-            playing = true;
-        }
-        soloMoveProgress();
+function stampAudio(context, e) {
+    var x = e.clientX + document.body.scrollLeft - 15;
+    if (e.which == 3) {
+        context.fillStyle = "white";
+        context.fillRect(x-4,0,8,20);
     }
+    else {
+        context.fillRect(x-2,0,4,20);
+    }
+    context.fillStyle = "black";
 }
+
+var SoloMoveI = 0;
 function soloMoveProgress() {
-    var elem = document.getElementById("progBar");   
+    var elem = document.getElementById("progBar");
+    var indicator = document.getElementById("time-indicator");
     var idx = 0;
     var width = 0;
-    var id = setInterval(frame, 250);
-    var i = 0;
+    var id = setInterval(frame, 30);
+    
+    var allMinutes = Math.floor(audio.duration / 60);
+    var allSeconds = Math.floor(audio.duration - allMinutes * 60);
+    
+    var currMinutes;
+    var currSeconds;
     
     function frame() {
-        if (audio.currentTime == audio.duration) {
+        if (audio.currentTime == audio.duration || !playing) {
             clearInterval(id);
         } 
         else {
-            /*for (var j = 0; j < layers.length; j++) {
-                while(layers[j][i].time < audio.currentTime) {
-                    draw(layers[j][i].x,layers[j][i].y,layers[j][i].tool,layers[j][i].color,layers[j][i].size,layers[j][i].angle,layers[j][i].clicked);
-                    i++;
+            if (SoloMoveI < layers.length) {
+                while(layers[SoloMoveI].time <= audio.currentTime) {
+                    draw(layers[SoloMoveI]);
+                    SoloMoveI++;
+                    if (SoloMoveI == layers.length) {
+                        //SoloMoveI = 0;
+                        break;
+                    }
                 }
-                i = 0;
-            }*/
+                //i = 0;
+            }
+            currMinutes = Math.floor(audio.currentTime / 60);
+            currSeconds = Math.floor(audio.currentTime - currMinutes * 60);
+            indicator.innerHTML = "<b>" + currMinutes + ":" + ("0" + currSeconds).slice(-2) + " / " + allMinutes + ":" + ("0" + allSeconds).slice(-2) + "</b>";
+            
             width = (audio.currentTime / audio.duration) * 100;
             elem.style.width = width + '%'; 
         }
     }
 }
-function undo() {
-    savedActionIdx--;
-    audio.currentTime = savedCurrTime;
-    
-    actions = actions.slice(0,savedActionIdx);
-    actionIdx = savedActionIdx;
 
-    redrawAll();
-    document.getElementById("undo-button").disabled = true;
-}
 function redrawAll(time) {
+    ctx.fillStyle = "rgb(0,0,0)";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
-    // Draw all visible layers
-    
-    if (soloBG == 1) {
-        ctx.fillStyle = "rgb(0,0,0)";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    }
-    else if (soloBG == 2) {
-        ctx.fillStyle = "rgb(255,255,255)";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    }
-    
-    for (var i = 0; i < layers.length; i++) {
-        if (!layers[i].visible) continue;
-        sprayNum = 0;
-        for (var j = 0; j < layers[i].actions.length; j++) {
-            draw(layers[i].actions[j].x,layers[i].actions[j].y,layers[i].actions[j].tool,layers[i].actions[j].color,
-            layers[i].actions[j].size,layers[i].actions[j].angle,layers[i].actions[j].clicked);
+    if (layers.length != 0) {
+        randN = 0;
+        for (var i = 0; i < layers.length; i++) {
+            if (layers[i].time < time) {
+                draw(layers[i]);
+            }
+            else {
+                SoloMoveI = i;
+                break;
+            }
         }
     }
     
-    // Draw current layer
     if (actions.length != 0) {
-        
-        sprayNum = 0;
+        randN = 0;
         for (var i = 0; i < actions.length; i++) {
-            draw(actions[i].x,actions[i].y,actions[i].tool,actions[i].color,actions[i].size,actions[i].angle,actions[i].clicked);
+            if (actions[i].time < time) {
+                draw(actions[i]);
+            }
+            else {
+                actions = actions.slice(0, i);
+            }
         }
     }
 }
 function newLayer() {
     if (actions.length == 0) return;
-
-    var temp = actions;
-    layers.push({actions:temp, visible: true});
-    actions = [];
-    actionIdx = 0;
     
+    ctx.fillStyle = "rgb(0,0,0)";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    SoloMoveI = 0;
+
+    if (layers.length == 0) {
+        layers = actions;
+    }
+    else {
+        layers = layers.concat(actions);
+        layers.sort(function(a, b){return a.time-b.time});
+    }
+    actions = [];
+    
+    document.getElementById("progBar").style.width = 0;
     audio.currentTime = 0;
     audio.pause();
-    sprayNum = 0;
+    randN = 0;
     playing = false;
-    document.getElementById("play-icon").setAttribute("class", "glyphicon glyphicon-play");
-    document.getElementById("layerSel").innerHTML = "";
     
-    for (var i = 0; i < layers.length; i++) {
-         document.getElementById("layerSel").innerHTML = document.getElementById("layerSel").innerHTML + "<option value=\"" + i + "\">" + (i+1) + "</option>";
-    }
-    //document.getElementById("visible-checkbox-div").style.display = "block";
-    document.getElementById("visible-checkbox").checked = true;
-    document.getElementById("layerSel").selectedIndex = layers.length-1;
+    var layW = document.getElementById("layers-wrapper");
+    layW.innerHTML = layW.innerHTML + "<div>" + (layW.childNodes.length-1) + "</div>";
 }
-function selectedLayer() {
-    var e = document.getElementById("layerSel");
-    var layerNum = e.options[e.selectedIndex].value;
-    
-    document.getElementById("visible-checkbox").checked = layers[layerNum].visible;
-}
-function layerVisibilityChanged() {
-    var e = document.getElementById("layerSel");
-    var layerNum = e.options[e.selectedIndex].value;
-    
-    layers[layerNum].visible = document.getElementById("visible-checkbox").checked;
-    
-    redrawAll();
-}
+
+var encoder;
+var encoderOutput;
 function finishSolo() {
-    $('#loading-popup').modal('show');
     if (actions.length != 0) {
-        var temp = actions;
-        layers.push({actions:temp, visible: true});
-        actions = [];
+        layers = layers.concat(actions);
+        layers.sort(function(a, b){return a.time-b.time});
     }
+    else if (layers.length == 0) return;
     
-    // Join actions of all layers and sort them by time of draw
-    var joinedActions = [];
-    for (var i = 0; i < layers.length; i++) {
-        joinedActions = joinedActions.concat(layers[i].actions);
+    $('#download-popup').modal('show');
+
+    ctx.fillStyle = "rgb(0,0,0)";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    var fullTime = audio.duration;
+    var startTime = new Date().getTime();
+    
+    var l = 0;
+    var id = setInterval(recordCan, 100);
+    function recordCan() {
+        var currentTime = (new Date().getTime() - startTime) / 1000;
+        
+        if (currentTime >= fullTime) {
+            clearInterval(id);
+            startFFmpeg();
+        }
+        while(layers[l].time <= currentTime) {
+            draw(layers[l]);
+            l++;
+            
+            if (l == layers.length) {
+                clearInterval(id);
+                startFFmpeg();
+                break;
+            }
+        }
+        
+        encoder.add(ctx);
     }
-    joinedActions.sort(function(a, b){return a.time-b.time});
-    
-    socket.emit('upload-record', { name:soloName, audio:soloSelectedMusic, canW:canvasWidth, canH:canvasHeight, bg:soloBG, actions:joinedActions });
-    
-    goHome();
 }
+
 function records() {
-    document.getElementById("main-homepage").style.display = "none";
-    document.getElementById("main-records").style.display = "block";
-    document.getElementById("rec-mute-button").disabled = true;
-    
-    recCanvas = document.getElementById('rec-canv');
-    document.getElementById("footer").style.visibility = "hidden";
-    
-    socket.emit('records-req');
+
 }
-/*function recordsToHome() {
-    document.getElementById("main-records").style.display = "none";
-    document.getElementById("main-homepage").style.display = "block";
-}*/
+
+function startFFmpeg() {
+    encoderOutput = encoder.compile();
+    
+    var url = window.URL.createObjectURL(encoderOutput);
+    
+    var binaryData = [];
+    binaryData.push(encoderOutput);
+    var vBlob = new Blob(binaryData);
+    
+    var aBlob = dataURItoBlob(rawAudio);
+    
+    convertStreams(vBlob,aBlob);
+}
 
 function join(val) {
     document.getElementById("join-error").style.visibility = "hidden";
@@ -431,31 +448,33 @@ var boudRect;
 var pickerBoudRect;
 var imageData;
 
-var drawColor = "black";
-var drawPercent = 1;
-var drawTool = "hLine";
+var drawColor = "white";
+var drawSize = 1;
+var drawTool = "brush";
 var drawAngle = 0;
-var lineCounter = 0;
 
-var savedDrawPercent;
+var playing = false;
 
-var audio;
+var rawAudio, audio;
 var randAngle;
 var randNums;
 
 var x;
 var y;
 var stepsCounter = 0;
-var stepsX = []
-var stepsY = []
+
+// rLine
+var rLineStart = false;
+var stepsX = new Array(5);
+var stepsY = new Array(5);
 var deltaX;
 var deltaY;
 
 var actions = [];
 var layers = [];
 var savedCurrTime;
-var actionIdx = 0;
-var savedActionIdx = 0;
+
+var drawing = false;
 
 function pickColor(res, e) {
     
@@ -509,22 +528,19 @@ function parseURLParams(url) {
 
 function getColor(xCoord,yCoord) {
     
-    var index = (256 * 4 * yCoord) + (xCoord * 4);
+    var index = (440 * 4 * yCoord) + (xCoord * 4);
     
     var r = imageData.data[index-4];
     var g = imageData.data[index-3];
     var b = imageData.data[index-2];
-    document.getElementById('show-color').style.backgroundColor = "rgb(" + r + "," + g + "," + b + ")";
-    document.getElementById('red').value = r;
-    document.getElementById('green').value = g;
-    document.getElementById('blue').value = b;
+    document.getElementById('layers-wrapper').style.backgroundColor = "rgb(" + r + "," + g + "," + b + ")";
     drawColor = rgbToHex(r,g,b);
     
     // Converts RGB to HSL and uses H and S for base values, while changing L, then presenting these colors in left panel where user can change brightness.
     
     var hslVal = rgbToHsl(r,g,b);
     
-    var brightnessCol = document.getElementById('brightness-column');
+    var brightnessCol = document.getElementById('brightness-row');
     var brElements = brightnessCol.childNodes;
     
     // If the selected color is shade of gray (if all rgb values are less than 10 points apart), if it is, just set brightness column to gray palette
@@ -538,29 +554,6 @@ function getColor(xCoord,yCoord) {
             brElements[(i*2)+1].style.backgroundColor = "hsl(" + hslVal[0]*360 + "," + hslVal[1]*100 + "%," + (i/12)*100 + "%)";
         }
     }
-}
-
-function rgbChanged() {
-    var r = document.getElementById('red').value;
-    var g = document.getElementById('green').value;
-    var b = document.getElementById('blue').value;
-    
-    if (isNaN(r) || r == "") {
-        document.getElementById('red').value = "0";
-    }
-    if (isNaN(g) || g == "") {
-        document.getElementById('green').value = "0";
-    }
-    if (isNaN(b) || b == "") {
-        document.getElementById('blue').value = "0";
-    }
-    
-    r = document.getElementById('red').value;
-    g = document.getElementById('green').value;
-    b = document.getElementById('blue').value;
-    
-    drawColor = rgbToHex(r,g,b);
-    document.getElementById('show-color').style.backgroundColor = "rgb(" + r + "," + g + "," + b + ")";
 }
 
 function rgbToHsl(r, g, b){
@@ -584,52 +577,26 @@ function rgbToHsl(r, g, b){
     return [h, s, l];
 }
 
-/*function hslToRgb(h, s, l){
-    var r, g, b;
-
-    if(s == 0){
-        r = g = b = l; // achromatic
-    }else{
-        var hue2rgb = function hue2rgb(p, q, t){
-            if(t < 0) t += 1;
-            if(t > 1) t -= 1;
-            if(t < 1/6) return p + (q - p) * 6 * t;
-            if(t < 1/2) return q;
-            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-            return p;
-        }
-
-        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        var p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1/3);
-        g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1/3);
-    }
-
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}*/
-
-function thick1()  { drawPercent = 1; savedDrawPercent = 1; selectedThick(1); }
-function thick2()  { drawPercent = 2; savedDrawPercent = 2; selectedThick(2); }
-function thick3()  { drawPercent = 3; savedDrawPercent = 3; selectedThick(3); }
-function thick4()  { drawPercent = 4; savedDrawPercent = 4; selectedThick(4); }
-function thick5()  { drawPercent = 5; savedDrawPercent = 5; selectedThick(5); }
-function thick6()  { drawPercent = 7; savedDrawPercent = 7; selectedThick(6); }
-function thick7()  { drawPercent = 10; savedDrawPercent = 10; selectedThick(7); }
-function thick8()  { drawPercent = 13; savedDrawPercent = 13; selectedThick(8); }
-function thick9()  { drawPercent = 16; savedDrawPercent = 16; selectedThick(9); }
-function thick10() { drawPercent = 20; savedDrawPercent = 20; selectedThick(10); }
-function thick11() { drawPercent = 25; savedDrawPercent = 25; selectedThick(11); }
-function thick12() { drawPercent = 30; savedDrawPercent = 30; selectedThick(12); }
-function thick13() { drawPercent = 35; savedDrawPercent = 35; selectedThick(13); }
-function thick14() { drawPercent = 40; savedDrawPercent = 40; selectedThick(14); }
-function thick15() { drawPercent = 45; savedDrawPercent = 45; selectedThick(15); }
-function thick16() { drawPercent = 50; savedDrawPercent = 50; selectedThick(16); }
-function thick17() { drawPercent = 55; savedDrawPercent = 55; selectedThick(17); }
-function thick18() { drawPercent = 60; savedDrawPercent = 60; selectedThick(18); }
-function thick19() { drawPercent = 80; savedDrawPercent = 80; selectedThick(19); }
-function thick20() { drawPercent = 100; savedDrawPercent = 100; selectedThick(20); }
-function thick21() { drawPercent = 200; savedDrawPercent = 200; selectedThick(21); }
+function thick1()  { drawSize = 3; saveddrawSize = 3; selectedThick(1); }
+function thick2()  { drawSize = 6; saveddrawSize = 6; selectedThick(2); }
+function thick3()  { drawSize = 10; saveddrawSize = 10; selectedThick(3); }
+function thick4()  { drawSize = 15; saveddrawSize = 15; selectedThick(4); }
+function thick5()  { drawSize = 20; saveddrawSize = 20; selectedThick(5); }
+function thick6()  { drawSize = 25; saveddrawSize = 25; selectedThick(6); }
+function thick7()  { drawSize = 30; saveddrawSize = 30; selectedThick(7); }
+function thick8()  { drawSize = 40; saveddrawSize = 40; selectedThick(8); }
+function thick9() { drawSize = 60; saveddrawSize = 60; selectedThick(9); }
+function thick10() { drawSize = 90; saveddrawSize = 90; selectedThick(10); }
+function thick11() { drawSize = 130; saveddrawSize = 130; selectedThick(11); }
+function thick12() { drawSize = 170; saveddrawSize = 170; selectedThick(12); }
+function thick13() { drawSize = 220; saveddrawSize = 220; selectedThick(13); }
+function thick14() { drawSize = 270; saveddrawSize = 270; selectedThick(14); }
+function thick15() { drawSize = 350; saveddrawSize = 350; selectedThick(15); }
+function thick16() { drawSize = 450; saveddrawSize = 450; selectedThick(16); }
+function thick17() { drawSize = 550; saveddrawSize = 550; selectedThick(17); }
+function thick18() { drawSize = 650; saveddrawSize = 650; selectedThick(18); }
+function thick19() { drawSize = 720; saveddrawSize = 720; selectedThick(19); }
+function thick20() { drawSize = 3000; saveddrawSize = 3000; selectedThick(20); }
 
 function selectedThick(val) {
     var selT = "thick" + selThick;
@@ -658,101 +625,187 @@ function bright13() { selectedBright(13); }
 
 function selectedBright(val) {
     var selB = document.getElementById("bright" + val);
-    document.getElementById('show-color').style.backgroundColor = selB.style.backgroundColor;
+    document.getElementById('layers-wrapper').style.backgroundColor = selB.style.backgroundColor;
     drawColor = selB.style.backgroundColor;
 }
 
-function tool1() { drawTool = "hLine"; selectedTool(1); }
+function tool1() { drawTool = "brush"; selectedTool(1); }
 function tool2() { drawTool = "rLine"; selectedTool(2); }
-function tool3() { drawTool = "sprayLine"; selectedTool(3); }
-function tool4() { drawTool = "spray"; selectedTool(4); }
-function tool5() { drawTool = "brushInc"; selectedTool(5); }
-function tool6() { drawTool = "brushIncSprayed"; selectedTool(6); }
-function tool7() { drawTool = "brushDec"; selectedTool(7); }
-function tool8() { drawTool = "brushDecSprayed"; selectedTool(8); }
-function tool9() { drawTool = "fullRoundSpray"; selectedTool(9); }
-function tool10() { drawTool = "stripedRoundSpray"; selectedTool(10); }
-function tool11() { drawTool = "blackedSpray"; selectedTool(11); }
-function tool12() { drawTool = "blackedSpraySquare"; selectedTool(12); }
-function tool13() { drawTool = "brush"; selectedTool(13); }
-function tool14() { drawTool = "transparent"; selectedTool(14); }
+function tool3() { drawTool = "spray"; selectedTool(3); }
+function tool4() { drawTool = "centeredSpray"; selectedTool(4); }
+function tool5() { drawTool = "softCircle"; selectedTool(5); }
+function tool6() { drawTool = "hardCircle"; selectedTool(6); }
 
 function selectedTool(val) {
-    var selT = "toolLab" + selTool;
-    document.getElementById(selT).style.backgroundColor = "white";
-    document.getElementById(selT).style.color = "black";
+    var selT = "tool" + selTool;
+    document.getElementById(selT).style.border = "2px solid #DDDDDD";
+    //document.getElementById(selT).style.color = "black";
     
-    selT = "toolLab" + val;
-    document.getElementById(selT).style.backgroundColor = "black";
-    document.getElementById(selT).style.color = "white";
+    selT = "tool" + val;
+    document.getElementById(selT).style.border = "2px solid #000000";
+    //document.getElementById(selT).style.color = "white";
     selTool = val;
 }
 
-var sprayNum = 0;
-function draw(xC,yC,tool,color,size,angle,clicked) {
+var randN = 0;
+function draw(action) {
     
-    if (tool == "hLine") {
-        size = (size/100) * canvasWidth;
+    //console.log(xC,yC,tool,color,size,angle,clicked);
+    
+    if (action.tool == "brush") {
         ctx.beginPath();
-        ctx.lineWidth = 2;
-        ctx.moveTo(xC-(size/2),yC);
-        ctx.lineTo(xC+(size/2),yC);
-        ctx.strokeStyle = color;
-        ctx.stroke();
+        ctx.fillStyle = action.color;
+        ctx.arc(action.x,action.y,action.size/2,0,2*Math.PI);
+        ctx.fill();
+        ctx.closePath();
     }
-    else if (tool == "rLine") {
-        if (clicked) return;
+    
+    else if (action.tool == "rLine") {
+        if (action.clicked) return;
         
-        size = ((size/100) * canvasHeight) * 2;
-        angle = angle + 90;
-        var cos = Math.cos(Math.PI * angle / 180.0);
-        var sin = Math.sin(Math.PI * angle / 180.0);
+        var tSize = (action.size*2) - (randNums[randN]*action.size);
         
-        ctx.beginPath();
-        ctx.lineWidth = 1;
+        var lw = 1 + (tSize/500);
         
-        ctx.moveTo(xC - size/2 * cos, yC - size/2 * sin); ctx.lineTo(xC - (size/2-size/50) * cos, yC - (size/2-size/50) * sin);
-        ctx.moveTo(xC + size/2 * cos, yC + size/2 * sin); ctx.lineTo(xC + (size/2-size/50) * cos, yC + (size/2-size/50) * sin);
+        var thr = 0.2 // Threshold for probability of drawn pixel in a line
         
-        ctx.moveTo(xC - (size/2-size/20) * cos, yC - (size/2-size/20) * sin); ctx.lineTo(xC - (size/2-size/15) * cos, yC - (size/2-size/15) * sin);
-        ctx.moveTo(xC + (size/2-size/20) * cos, yC + (size/2-size/20) * sin); ctx.lineTo(xC + (size/2-size/15) * cos, yC + (size/2-size/15) * sin);
+        //size = ((size/100) * canvasHeight) * 2;
+        var tAngle = action.angle + 90;
+        var cos = Math.cos(Math.PI * tAngle / 180.0);
+        var sin = Math.sin(Math.PI * tAngle / 180.0);
         
-        ctx.moveTo(xC - (size/2-size/10) * cos, yC - (size/2-size/10) * sin); ctx.lineTo(xC - (size/2-size/6.5) * cos, yC - (size/2-size/6.5) * sin);
-        ctx.moveTo(xC + (size/2-size/10) * cos, yC + (size/2-size/10) * sin); ctx.lineTo(xC + (size/2-size/6.5) * cos, yC + (size/2-size/6.5) * sin);
+        ctx.fillStyle = action.color;
         
-        ctx.moveTo(xC - (size/2-size/5.5) * cos, yC - (size/2-size/5.5) * sin); ctx.lineTo(xC - (size/2-size/3.5) * cos, yC - (size/2-size/3.5) * sin);
-        ctx.moveTo(xC + (size/2-size/5.5) * cos, yC + (size/2-size/5.5) * sin); ctx.lineTo(xC + (size/2-size/3.5) * cos, yC + (size/2-size/3.5) * sin);
+        for (var i = 0; i < Math.round(tSize/2); i++) {
+            
+            ctx.globalAlpha = i/(tSize/2);
+            
+            if (tAngle == 90 || tAngle == 270) {                                              // Vertical
+                if (randNums[randN+1] < thr) ctx.fillRect(action.x  - (tSize/2 + i ) * cos, action.y - (tSize/2 - i) * sin, lw, lw);
+                if (randNums[randN+2] < thr) ctx.fillRect(action.x  + (tSize/2 + i ) * cos, action.y + (tSize/2 - i) * sin, lw, lw);
+            }
+            else if (tAngle == 0 || tAngle == 360) {                                          // Horizontal
+                if (randNums[randN+1] < thr) ctx.fillRect(action.x  - (tSize/2 - i ) * cos, action.y - (tSize/2 + i) * sin, lw, lw);
+                if (randNums[randN+2] < thr) ctx.fillRect(action.x  + (tSize/2 - i ) * cos, action.y + (tSize/2 + i) * sin, lw, lw);
+            }
+            else {                                                                          // Tilted
+                if (randNums[randN+1] < thr) ctx.fillRect(action.x  - (tSize/2 - i ) * cos, action.y - (tSize/2 - i) * sin, lw, lw);
+                if (randNums[randN+2] < thr) ctx.fillRect(action.x  + (tSize/2 - i ) * cos, action.y + (tSize/2 - i) * sin, lw, lw);
+            }
+            ctx.globalAlpha = 1;
+            randN += 3;
+            if (randN >= 100000) randN = 0;
+        }
         
-        ctx.moveTo(xC - (size/5.4) * cos, yC - (size/5.4) * sin); ctx.lineTo(xC + (size/5.4) * cos, yC + (size/5.4) * sin);
-        
-        ctx.strokeStyle = color;
-        ctx.stroke();
     }
-    else if (tool == "sprayLine") {
+    else if (action.tool == "spray") {
         
-        var percent = size;
-        size = (size/100) * canvasWidth;
+        var tSize = action.size/2;
+        ctx.fillStyle = action.color;
+        
+        for (var i = (tSize*tSize) / 100; i > 0; i--) {
+            
+            var x = randNums[randN] * tSize;
+            var y = randNums[randN+1] * tSize;
+            
+            if (randNums[randN+2] > 0.5) x = x*-1;
+            if (randNums[randN+3] > 0.5) y = y*-1;
+            
+            x = action.x + x;
+            y = action.y + y;
+            
+            var d = Math.sqrt(Math.pow(x - action.x,2) + Math.pow(y - action.y,2));
+            
+            if (d < tSize) ctx.fillRect(x, y, 1.5, 1.5);
+            
+            randN += 4;
+            if (randN >= 100000) randN = 0;
+        }
+    }
+    else if (action.tool == "centeredSpray") {
+        
+        var tSize = action.size/2;
+        ctx.fillStyle = action.color;
+        
+        for (var i = (tSize*tSize) / 100; i > 0; i--) {
+            
+            var angle = randNums[randN] * Math.PI*2;
+            var radius = randNums[randN+1] * tSize;
+            //ctx.globalAlpha = 1 - Math.random();
+            
+            ctx.fillRect(action.x + radius * Math.cos(angle), action.y + radius * Math.sin(angle), 1.5, 1.5);
+            
+            randN += 2;
+            if (randN >= 100000) randN = 0;
+        }
+    }
+    else if (action.tool == "softCircle") {
+        
+        ctx.fillStyle = action.color;
+        var tSize = action.size/2;
+        
+        for (var radius = tSize; radius >= 0; radius -= 2) {
+            ctx.globalAlpha = 1 - (radius / tSize);
+            for (var i = 0; i < Math.PI*2; i += Math.PI/(radius*1.5)) {
+                ctx.fillRect(action.x + (radius * Math.cos(i)), action.y + (radius * Math.sin(i)), 2, 2);
+            }
+        }
+    }
+    
+    else if (action.tool == "hardCircle") {
+        
+        ctx.fillStyle = action.color;
+        var tSize = action.size/2;
+        
+        
+        /*for (var radius = tSize; radius > 0; radius -= 4) {
+            ctx.globalAlpha = 1 - (radius / tSize);
+            for (var i = 0; i < Math.PI*2; i += Math.PI/(radius*1.5)) {
+                ctx.fillRect(action.x + (radius * Math.cos(i)), action.y + (radius * Math.sin(i)), 4, 4);
+            }
+        }*/
+        console.log(tSize);
+        for (var i = -tSize; i < tSize; i += 3) {
+            for (var j = -tSize; j < tSize; j++) {
+                ctx.globalAlpha = 1 - (Math.abs(i)/(tSize));
+                var d = Math.sqrt(Math.pow((action.x + j) - action.x,2) + Math.pow((action.y + i) - action.y,2));
+            
+                if (d < tSize) ctx.fillRect(action.x + j, action.y + i, 1, 1);
+                //ctx.fillRect(action.x + j, action.y + i, 1, 1);
+            }
+        }
+        for (var j = -tSize; j < tSize; j += 3) {
+            for (var i = -tSize; i < tSize; i++) {
+                ctx.globalAlpha = 1 - (Math.abs(j)/(tSize));
+                var d = Math.sqrt(Math.pow((action.x + j) - action.x,2) + Math.pow((action.y + i) - action.y,2));
+            
+                if (d < tSize) ctx.fillRect(action.x + j, action.y + i, 1, 1);
+                //ctx.fillRect(action.x + j, action.y + i, 1, 1);
+            }
+        }
+        
+        
+    }
+    /*else if (tool == "blackedSpray") {
+        
+        size = size / 2;
         
         ctx.fillStyle = color;
-        for (var i = size; i > 0; i--) {
-            var x = (randNums[sprayNum] / 1000) * size/2;
-            var y = (randNums[sprayNum+1] / 1000) * size/2;
+        
+        for (var i = size; i > 0; i = i-2) {
+            var x = (randNums[sprayNum] / 1000) * size;
+            var y = (randNums[sprayNum+1] / 1000) * size;
             if (Math.random() >= 0.5) x = x * -1;
             if (Math.random() >= 0.5) y = y * -1;
             
-            if (Math.abs(y) < size/6 || percent == 200) ctx.fillRect(xC + x, yC + y, 1, 1);
+            if (Math.abs(x) + Math.abs(y) < size * 1.4) ctx.fillRect(xC + x, yC + y, 1, 1);
             
             sprayNum = sprayNum + 2;
             if (sprayNum >= 10000) sprayNum = 0;
         }
-         
-    }
-    else if (tool == "spray") {
         
-        size = ((size/100) * canvasWidth) / 2;
-        
-        ctx.fillStyle = color;
-        for (var i = size; i > 0; i--) {
+        ctx.fillStyle = 'black';
+        for (var i = size; i > 0; i = i-2) {
             var angle = randAngle[sprayNum];
             var radius = (randNums[sprayNum] / 1000) * size;
             ctx.fillRect(xC + radius * Math.cos(angle), yC + radius * Math.sin(angle), 1, 1);
@@ -761,9 +814,10 @@ function draw(xC,yC,tool,color,size,angle,clicked) {
             if (sprayNum >= 10000) sprayNum = 0;
         }
     }
+    
     else if (tool == "brushInc" || tool == "brushDec" || tool == "brushIncSprayed" || tool == "brushDecSprayed") {
         
-        size = (size/100) * canvasWidth;
+        //size = (size/100) * canvasWidth;
         
         if (clicked) {
             ctx.beginPath();
@@ -804,140 +858,6 @@ function draw(xC,yC,tool,color,size,angle,clicked) {
             }
         }
     }
-    else if (tool == "fullRoundSpray") {
-        
-        size = ((size/100) * canvasWidth) / 2;
-        
-        ctx.beginPath();
-        ctx.arc(xC,yC,size,0,2*Math.PI);
-        
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-        
-        ctx.stroke();
-        
-        for (var i = size*5; i > 0; i--) {
-            var x = (randNums[sprayNum] / 1000) * size;
-            var y = (randNums[sprayNum+1] / 1000) * size;
-            if (Math.random() >= 0.5) x = x * -1;
-            if (Math.random() >= 0.5) y = y * -1;
-            
-            if (Math.abs(x) + Math.abs(y) < size * 1.4) ctx.fillRect(xC + x, yC + y, 1, 1);
-            
-            sprayNum = sprayNum + 2;
-            if (sprayNum >= 10000) sprayNum = 0;
-        }
-    }
-    else if (tool == "stripedRoundSpray") {
-        
-        size = ((size/100) * canvasWidth) / 2;
-
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-
-        for (var i = 3; i <= 32; i = i+4) {
-            ctx.beginPath();
-            ctx.arc(xC,yC,size,(i/16)*Math.PI,((i+2)/16)*Math.PI);
-            ctx.stroke();
-        }
-        
-        for (var i = size*5; i > 0; i--) {
-            var x = (randNums[sprayNum] / 1000) * size;
-            var y = (randNums[sprayNum+1] / 1000) * size;
-            if (Math.random() >= 0.5) x = x * -1;
-            if (Math.random() >= 0.5) y = y * -1;
-            
-            if (Math.abs(x) + Math.abs(y) < size * 1.4) ctx.fillRect(xC + x, yC + y, 1, 1);
-            
-            sprayNum = sprayNum + 2;
-            if (sprayNum >= 10000) sprayNum = 0;
-        }
-    }
-    else if (tool == "blackedSpray") {
-        
-        size = ((size/100) * canvasWidth) / 2;
-        
-        ctx.fillStyle = color;
-        
-        for (var i = size; i > 0; i = i-2) {
-            var x = (randNums[sprayNum] / 1000) * size;
-            var y = (randNums[sprayNum+1] / 1000) * size;
-            if (Math.random() >= 0.5) x = x * -1;
-            if (Math.random() >= 0.5) y = y * -1;
-            
-            if (Math.abs(x) + Math.abs(y) < size * 1.4) ctx.fillRect(xC + x, yC + y, 1, 1);
-            
-            sprayNum = sprayNum + 2;
-            if (sprayNum >= 10000) sprayNum = 0;
-        }
-        
-        ctx.fillStyle = 'black';
-        for (var i = size; i > 0; i = i-2) {
-            var angle = randAngle[sprayNum];
-            var radius = (randNums[sprayNum] / 1000) * size;
-            ctx.fillRect(xC + radius * Math.cos(angle), yC + radius * Math.sin(angle), 1, 1);
-            
-            sprayNum = sprayNum + 2;
-            if (sprayNum >= 10000) sprayNum = 0;
-        }
-    }
-    else if (tool == "blackedSpraySquare") {
-        
-        size = ((size/100) * canvasWidth) / 2;
-        
-        ctx.fillStyle = color;
-        
-        for (var i = size; i > 0; i = i-2) {
-            var x = (randNums[sprayNum] / 1000) * size;
-            var y = (randNums[sprayNum+1] / 1000) * size;
-            if (Math.random() >= 0.5) x = x * -1;
-            if (Math.random() >= 0.5) y = y * -1;
-            
-            ctx.fillRect(xC + x, yC + y, 1, 1);
-            
-            sprayNum = sprayNum + 2;
-            if (sprayNum >= 10000) sprayNum = 0;
-        }
-        
-        ctx.fillStyle = 'black';
-        
-        for (var i = size; i > 0; i = i-2) {
-            var x = (randNums[sprayNum] / 1000) * size;
-            var y = (randNums[sprayNum+1] / 1000) * size;
-            if (Math.random() >= 0.5) x = x * -1;
-            if (Math.random() >= 0.5) y = y * -1;
-            
-            ctx.fillRect(xC + x, yC + y, 1, 1);
-            
-            sprayNum = sprayNum + 2;
-            if (sprayNum >= 10000) sprayNum = 0;
-        }
-    }
-    else if (tool == "brush") {
-        
-        size = (size/100) * canvasWidth;
-        
-        if (clicked) {
-
-            ctx.beginPath();
-            ctx.arc(xC,yC,size/2,0,2*Math.PI);
-            ctx.fillStyle = color;
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.lineWidth = size;
-            ctx.lineJoin = ctx.lineCap = 'round';
-            ctx.strokeStyle = color;
-            ctx.moveTo(xC,yC);
-            ctx.lineTo(xC,yC);
-        }
-        else {
-            ctx.lineTo(xC,yC);
-            ctx.stroke();
-        }
-    }
     else if (tool == "transparent") {
         
         ctx.beginPath();
@@ -945,7 +865,7 @@ function draw(xC,yC,tool,color,size,angle,clicked) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.fill();
         
-    }
+    }*/
 }
 
 function componentToHex(c) {
@@ -959,159 +879,175 @@ function rgbToHex(r, g, b) {
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+
+        // Pick a remaining element...
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
+
+        // And swap it with the current element.
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+  }
+  return array;
+}
 
 function findxy(res, e) {
-    if(!drawPercent) drawPercent = 1;
 
-    if (res == 'down') {
+    if (res == 'down' && inSolo) {
+        
+        // if right mouse button pressed
+        if (event.which == 3) {
+            if (playing) {
+                audio.pause();
+                playing = false;
+                document.getElementById("finish-solo-button").disabled = false;
+                document.getElementById("new-layer-button").disabled = false;
+            }
+            else {
+                audio.play();
+                playing = true;
+                document.getElementById("finish-solo-button").disabled = true;
+                document.getElementById("new-layer-button").disabled = true;
+                soloMoveProgress();
+            }
+            return;
+        }
+        
+        stepsCounter = -1;
+        drawing = true;
         
         x = e.clientX + document.body.scrollLeft - boudRect.left;
         y = e.clientY + document.body.scrollTop - boudRect.top;
-        holding = true;
         
-        // Solo Session --------------------------------------
-        
-        if (inSolo) {
-            actionIdx++;
-            savedActionIdx = actionIdx;
-            savedCurrTime = audio.currentTime;
-            
+        // Save action for backtrack
+        if (noMusic) {
             var action = {
                 x: x,
                 y: y,
                 tool: drawTool,
                 color: drawColor,
-                size: drawPercent,
+                size: drawSize,
                 angle: drawAngle,
-                clicked: true,
-                time: audio.currentTime,
+                clicked: false
             }
-            actions.push(action);
         }
-        // ---------------------------------------------------
-        
-        // Draw with selected tool
-
-        draw(x,y,drawTool,drawColor,drawPercent,drawAngle,true);
-        
-        // Send data to server if it's live session
-        if (!inSolo) {
-            socket.emit('draw', {
+        else {
+            var action = {
                 x: x,
                 y: y,
                 tool: drawTool,
                 color: drawColor,
-                size: drawPercent,
+                size: drawSize,
                 angle: drawAngle,
-                clicked: true,
-                time: audio.currentTime,
-                session: mySessionID,
-                conductor: meConductor
-            });
+                clicked: false,
+                time: audio.currentTime
+            }
         }
+        actions.push(action);
         
-        savedDrawPercent = drawPercent;
+        // Draw with selected tool
         
-        if (drawTool == "brushInc" || drawTool == "brushIncSprayed") {
-            drawPercent = 1;
-        }
-        
-    }
-    if (res == 'up' || res == "out") {
-        if (holding) {
-            holding = false;
-            document.getElementById("undo-button").disabled = false;
-            drawPercent = savedDrawPercent;
-        }
-    }
-    if (res == 'move') {
-        
-        // Update coordinates
-        x = e.clientX + document.body.scrollLeft - boudRect.left;
-        y = e.clientY + document.body.scrollTop - boudRect.top;
-        
-        stepsX[stepsCounter] = x;
-        stepsY[stepsCounter] = y;
-        
-        if (holding) {
+        draw(action);
             
-            if (stepsCounter != 4 && (drawTool == "fullRoundSpray" || drawTool == "stripedRoundSpray")) {  // Occurs every 5 steps
+    }
+    
+    if (res == 'move' && inSolo) {
+        
+        if (drawing) {
+            
+            // Update coordinates
+            x = e.clientX + document.body.scrollLeft - boudRect.left;
+            y = e.clientY + document.body.scrollTop - boudRect.top;
+            
+            if (drawTool == "rLine") {
+                
                 stepsCounter++;
-                return;
+                
+                if (drawTool == "softCircle") {
+                    if (stepsCounter == 10) {
+                        stepsCounter = 0;
+                    }
+                    else return;
+                }
+                else if (drawTool == "rLine") {
+                
+                    if (rLineStart) {
+                        if (stepsCounter == 4) {
+                            deltaX = x - stepsX[0];
+                            deltaY = y - stepsY[0];
+                            drawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+                            stepsX[4] = x;
+                            stepsY[4] = y;
+                            stepsCounter = -1;
+                        }
+                        else {
+                            deltaX = x - stepsX[stepsCounter+1];
+                            deltaY = y - stepsY[stepsCounter+1];
+                            drawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+                            stepsX[stepsCounter] = x;
+                            stepsY[stepsCounter] = y;
+                        }
+                    }
+                    else if (stepsCounter == 4) {
+                        stepsX[stepsCounter] = x;
+                        stepsY[stepsCounter] = y;
+                        stepsCounter = -1;
+                        rLineStart = true;
+                        return;
+                    }
+                    else {
+                        stepsX[stepsCounter] = x;
+                        stepsY[stepsCounter] = y;
+                        return;
+                    }
+                }
             }
             
-            if (drawTool == "rLine" || drawTool == "sprayLine") {
-                if (stepsCounter == 4) {
-                    deltaX = x - stepsX[0];
-                    deltaY = y - stepsY[0];
-                }
-                else {
-                    deltaX = x - stepsX[stepsCounter+1];
-                    deltaY = y - stepsY[stepsCounter+1];
-                }
-                drawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-            }
-            
-            if (drawTool == "brushDec" || drawTool == "brushDecSprayed") {
-                if (drawPercent > 1) {
-                    drawPercent = drawPercent - 0.02;
-                }
-            }
-            else if (drawTool == "brushInc" || drawTool == "brushIncSprayed") {
-                if (drawPercent < savedDrawPercent) {
-                    drawPercent = drawPercent + 0.02;
-                }
-            }
-            
-            // Solo Session --------------------------------------
-            
-            if (inSolo) {
-                actionIdx++;
-            
+            if (noMusic) {
                 var action = {
                     x: x,
                     y: y,
                     tool: drawTool,
                     color: drawColor,
-                    size: drawPercent,
+                    size: drawSize,
+                    angle: drawAngle,
+                    clicked: false
+                }
+            }
+            else {
+                var action = {
+                    x: x,
+                    y: y,
+                    tool: drawTool,
+                    color: drawColor,
+                    size: drawSize,
                     angle: drawAngle,
                     clicked: false,
-                    time: audio.currentTime,
+                    time: audio.currentTime
                 }
-                actions.push(action);
             }
-            // ---------------------------------------------------
             
             
-            drawAndEmit();
-        }
-        stepsCounter++;
-        if (stepsCounter == 5) {
-            x5stepsB = x;
-            y5stepsB = y;
-            stepsCounter = 0;
+            actions.push(action);
+            
+            // Draw with selected tool
+            
+            draw(action);
         }
     }
-}
-
-function drawAndEmit() {
-    draw(x,y,drawTool,drawColor,drawPercent,drawAngle,false);
-            
-    // Send data to server if it's live session
-    if (!inSolo) {
-        socket.emit('draw', {
-            x: x,
-            y: y,
-            tool: drawTool,
-            color: drawColor,
-            size: drawPercent,
-            angle: drawAngle,
-            clicked: false,
-            time: audio.currentTime,
-            session: mySessionID,
-            conductor: meConductor
-        });
+    
+    if (res == 'up' || res == "out") {
+        drawing = false;
+        rLineStart = false;
+        ctx.globalAlpha = 1;
     }
+    
 }
 
 var muted = false;
@@ -1144,13 +1080,548 @@ function moveProgress() {
         }
     }
 }
+function setVolume(val) {
+    audio.volume = val/100;
+}
+
+$('#canv').bind('contextmenu', function(e) {
+    return false;
+});
+
+$('#progBar-div').mousedown(function(event) {
+    
+    if (event.which != 1 || playing) {
+        return;
+    }
+    
+    var elem = document.getElementById("progBar");
+    var barWidth = ($('#progBar').width() / $('#progBar-div').width()) * 100;
+    
+    var offset = event.pageX - $('#progBar-div').offset().left;
+    
+    var percent = (offset / $('#progBar-div').width()) * 100;
+    
+    if (percent < barWidth) {
+        elem.style.width = percent + '%';
+        var clickedTime = audio.duration * (percent/100);
+        redrawAll(clickedTime);
+        audio.currentTime = clickedTime;
+    }
+});
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// TEXT EDITOR
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+var textBoudRect;
+var textCtx;
+var letters = "abcdefghijklmnopqrstuvwxyz";
+var capitalLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+var numbers = "0123456789";
+var signs = "=!\"#$%&/()";
+var word = "|";
+var words = [];
+var writing, moving, txtDrawing, txtHolding, txtBorder = false;
+var textX, textY = 0;
+var xOffset, yOffset;
+var bgColor = "#000000";
+var textColor = "#FFFFFF";
+var capital = false;
+var textDuration = 5;
+
+function startTextEditor() {
+    
+    $('#solo-popup').modal('hide');
+    
+    var textCan = document.getElementById('text-canvas');
+    textCan.width = 1280;
+    textCan.height = 720;
+    
+    textCtx = textCan.getContext("2d");
+    textCtx.fillStyle = bgColor;
+    textCtx.fillRect(0, 0, 1280, 720);
+    
+    //textCtx.fillStyle = "#1E20B0";
+    //textCtx.font = "60px Calibri";
+    //textCtx.fillText("Khatschaturian", 640, 360);
+    
+    
+    
+    textCan.addEventListener("mousemove", function (e) {
+        textAction('move', e);
+    }, false);
+    textCan.addEventListener("mousedown", function (e) {
+        textAction('down', e);
+    }, false);
+    textCan.addEventListener("mouseup", function (e) {
+        textAction('up', e);
+    }, false);
+    textCan.addEventListener("mouseout", function (e) {
+        textAction('out', e);
+    }, false);
+    textCan.addEventListener("keyup", function (e) {
+        textAction('keyup', e);
+    }, false);
+    textCan.addEventListener("keydown", function (e) {
+        textAction('keydown', e);
+    }, false);
+    
+    
+    $('#text-popup').modal('show');
+}
+
+function textAction(action,event) {
+    
+    if (action == "down") {
+        
+        if (writing) return;
+        
+        txtHolding = true;
+        
+        textX = event.clientX - ((window.innerWidth - parseInt(document.getElementById('text-popup').style.width)) / 2) - parseInt($('#text-popup-body').css('padding-left'));
+        textY = event.clientY - document.getElementById('text-popup-header').offsetHeight - parseInt($('#text-popup-body').css('padding-top'));
+        
+        if (moving) {
+            if ($("#textSelectDropdown option").size() == 0) return;
+            
+            movingWords($("#textSelectDropdown").val()-1,textX,textY);
+        }
+        else {
+            
+            textCtx.fillStyle = textColor;
+            var size = $("#textSizeDropdown option:selected").text();
+            
+            if ($("#textFontDropdown").val() == 8) {
+                txtDrawing = true;
+                
+                textCtx.beginPath();
+                textCtx.arc(textX,textY,size/4,0,2*Math.PI);
+                textCtx.fill();
+                
+                textCtx.beginPath();
+                textCtx.lineWidth = size/2;
+                textCtx.lineJoin = textCtx.lineCap = 'round';
+                textCtx.strokeStyle = textColor;
+                textCtx.moveTo(textX,textY);
+                textCtx.lineTo(textX,textY);
+            }
+                
+            else {
+                writing = true;
+                textCtx.font = $("#textSizeDropdown option:selected").text() + "px " + $("#textFontDropdown option:selected").text();
+                textCtx.fillText(word, textX, textY);
+                document.getElementById("start-solo-session-button").disabled = true;
+                disableTextMenu();
+            }
+        }
+    }
+    else if (action == "move") {
+        if (txtDrawing) {
+            textX = event.clientX - ((window.innerWidth - parseInt(document.getElementById('text-popup').style.width)) / 2) - parseInt($('#text-popup-body').css('padding-left'));
+            textY = event.clientY - document.getElementById('text-popup-header').offsetHeight - parseInt($('#text-popup-body').css('padding-top'));
+            textCtx.lineTo(textX,textY);
+            textCtx.stroke();
+        }
+        if (!moving || !txtHolding || txtDrawing || $("#textSelectDropdown option").size() == 0) return;
+        textX = event.clientX - ((window.innerWidth - parseInt(document.getElementById('text-popup').style.width)) / 2) - parseInt($('#text-popup-body').css('padding-left'));
+        textY = event.clientY - document.getElementById('text-popup-header').offsetHeight - parseInt($('#text-popup-body').css('padding-top'));
+        movingWords($("#textSelectDropdown").val()-1,textX,textY);
+    }
+    else if (action == "up") {
+        txtHolding = false;
+        txtDrawing = false;
+    }
+    else if (action == "keyup") {
+        if (!writing) return;
+        
+        var key = event.keyCode;
+
+        if (key > 64 && key < 91) {         // Letter
+            if (capital) drawWord(capitalLetters.substring(key-64, key-65));
+            else drawWord(letters.substring(key-64, key-65));
+        }
+        else if (key > 47 && key < 58) {    // Number
+            drawWord(numbers.substring(key-47, key-48));
+        }
+        else if (key == 32) {               // Space
+            drawWord(" ");
+        }
+        else if (key == 8) {                // Backspace
+            word = word.substring(0, word.length - 1);
+            drawWord("");
+        }
+        else if (key == 16) {               // Shift
+            capital = false;
+        }
+        else if (key == 13) {               // Enter
+        
+            if (word != "|") {
+                word = word.substring(0, word.length - 1);
+            
+                redrawWords();
+            
+                $("#textSelectDropdown").append('<option value="' + ($("#textSelectDropdown option").size() + 1) + '">' + word + '</option>');
+                $("#textSelectDropdown").val($("#textSelectDropdown option").size());
+                //$("#textSelectDropdown").selectpicker("refresh");
+                
+                document.getElementById("start-solo-session-button").disabled = false;
+                
+                words.push({x:textX, y:textY, font:textCtx.font, color:textColor, text:word});
+                word = "|";
+            }
+            else {
+                redrawWords();
+            }
+            document.getElementById("text-add-button").disabled = false;
+            document.getElementById("text-add-button").style.border = "2px solid #00AA00";
+            writing = false;
+            moving = true;
+        }
+    }
+    else if (action == "keydown") {
+        if (capital) return;
+        
+        var key = event.keyCode;
+        if (key == 16) {
+            capital = true;
+        }
+    }
+}
+
+function movingWords(idx,x,y) {
+    var txt = words[idx].text;
+    var txtWidth = textCtx.measureText(txt).width;
+    var txtHeight =  parseInt(textCtx.font);
+    words[idx].x = x - (txtWidth/2);
+    words[idx].y = y + (txtHeight/2) -3;
+    
+    redrawWords();
+}
+
+function redrawWords() {
+    
+    var savedtxt = textCtx.font;
+    var savedfill = textCtx.fillStyle;
+    
+    textCtx.fillStyle = bgColor;
+    textCtx.fillRect(0, 0, 1280, 720);
+    
+    drawBorders();
+    
+    for (var i = 0; i < words.length; i++) {
+        textCtx.fillStyle = words[i].color;
+        textCtx.font = words[i].font;
+        textCtx.fillText(words[i].text, words[i].x, words[i].y);
+    }
+    
+    textCtx.font = savedtxt;
+    textCtx.fillStyle = savedfill;
+    
+    if (word != "|") {
+        textCtx.fillStyle = textColor;
+        textCtx.fillText(word, textX, textY);
+    }
+}
+
+function drawWord(letter) {
+    word = word.substring(0, word.length - 1);
+    word = word + letter + "|";
+    
+    redrawWords();
+}
+
+function drawBorders() {
+    if (txtBorder) {
+        var svd = textCtx.fillStyle;
+        
+        textCtx.fillStyle = "#888888";
+        textCtx.fillRect(426,0,2,720);
+        textCtx.fillRect(852,0,2,720);
+        textCtx.fillRect(0,239,1280,2);
+        textCtx.fillRect(0,479,1280,2);
+        //textCtx.fill();
+        
+        textCtx.fillStyle = svd;
+    }
+}
+
+function textAdd() {
+    moving = false;
+    enableTextMenu();
+    document.getElementById("text-add-button").disabled = true;
+    document.getElementById("text-add-button").style.border = "2px solid #FF0000";
+}
+
+function textRemove() {
+    if (words.length == 0) return;
+    //var idx = $("#textSelectDropdown").val()-1;
+   
+    
+    var select = document.getElementById("textSelectDropdown");
+    
+    words.splice(select.selectedIndex, 1);
+    select.remove(select.selectedIndex);
+    
+    for (var i = 0; i < $("#textSelectDropdown option").size(); i++) {
+        var opt = document.getElementById('textSelectDropdown').options[i];
+        opt.value = (i+1)+"";
+    }
+    
+    redrawWords();
+}
+
+function enableTextMenu() {
+    $("#textColorButton").spectrum("enable");
+    
+    document.getElementById("textFontDropdown").disabled = false;
+    document.getElementById("textSizeDropdown").disabled = false;
+    document.getElementById("textChangeDiv").style.border = "2px solid #00AA00";
+}
+
+function disableTextMenu() {
+    $("#textColorButton").spectrum("disable");
+    
+    document.getElementById("textFontDropdown").disabled = true;
+    document.getElementById("textSizeDropdown").disabled = true;
+    document.getElementById("textChangeDiv").style.border = "2px solid #FF0000";
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//
+// Functions for encoding two seperate sources: canvas recording(webm) and audio into mp4 container -------------------------------------------
+//
+
+var worker;
+var workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
+//var videoFile = !!navigator.mozGetUserMedia ? 'video.gif' : 'video.webm';
+
+function convertStreams(videoBlob, audioBlob) {
+    var vab;
+    var aab;
+    var buffersReady;
+    var workerReady;
+    var posted = false;
+
+    var fileReader1 = new FileReader();
+    fileReader1.onload = function() {
+        vab = this.result;
+
+        if (aab) buffersReady = true;
+
+        if (buffersReady && workerReady && !posted) postMessage();
+    };
+    var fileReader2 = new FileReader();
+    fileReader2.onload = function() {
+        aab = this.result;
+
+        if (vab) buffersReady = true;
+
+        if (buffersReady && workerReady && !posted) postMessage();
+    };
+
+    fileReader1.readAsArrayBuffer(videoBlob);
+    fileReader2.readAsArrayBuffer(audioBlob);
+
+    if (!worker) {
+        worker = processInWebWorker();
+    }
+
+    worker.onmessage = function(event) {
+        var message = event.data;
+        if (message.type == "ready") {
+            log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file has been loaded.');
+            workerReady = true;
+            if (buffersReady)
+                postMessage();
+        } else if (message.type == "stdout") {
+            log(message.data);
+        } else if (message.type == "start") {
+            log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file received ffmpeg command.');
+        } else if (message.type == "done") {
+            log(JSON.stringify(message));
+
+            var result = message.data[0];
+            log(JSON.stringify(result));
+
+            var blob = new Blob([result.data], {
+                type: 'video/mp4'
+            });
+
+            //log(JSON.stringify(blob));
+
+            PostBlob(blob);
+        }
+    };
+    var postMessage = function() {
+        posted = true;
+        worker.postMessage({
+            type: 'command',
+            arguments: [
+                '-i', 'video.webm',
+                '-itsoffset', textDuration,
+                '-i', 'audio.wav', 
+                '-c:v', 'mpeg4', 
+                '-c:a', 'vorbis', 
+                '-b:v', '6400k', 
+                '-b:a', '4800k',
+                '-strict', 'experimental', 'output.mp4'
+            ],
+            files: [
+                {
+                    data: new Uint8Array(vab),
+                    name: "video.webm"
+                },
+                {
+                    data: new Uint8Array(aab),
+                    name: "audio.wav"
+                }
+            ]
+        });
+    }
+    
+}
+function processInWebWorker() {
+    var blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");' +
+            'var now = Date.now;' +
+            'function print(text) {' +
+                'postMessage({"type" : "stdout","data" : text});' +
+    
+            '};' +
+            'onmessage = function(event) {' +
+                'var message = event.data;' +
+                'if (message.type === "command") {' +
+                    'var Module = {' +
+                        'print: print,' +
+                        'printErr: print,' +
+                        'files: message.files || [],' +
+                        'arguments: message.arguments || [],' +
+                        //'TOTAL_MEMORY: message.TOTAL_MEMORY || false' +
+                        'TOTAL_MEMORY: 500000000' +
+                    '};' +
+                    'postMessage({' +
+                        '"type" : "start",' +
+                        '"data" : Module.arguments.join(" ")});' +
+                    'postMessage({"' +
+                        'type" : "stdout",' +
+                        '"data" : "Received command: " + Module.arguments.join(" ") + ((Module.TOTAL_MEMORY) ? ". Processing with " + Module.TOTAL_MEMORY + " bits." : "")' +
+                    '});' +
+                    'var time = now();' +
+                    'var result = ffmpeg_run(Module);' +
+                    'var totalTime = now() - time;' +
+                    'postMessage({' +
+                        '"type" : "stdout",' +
+                        '"data" : "Finished processing (took " + totalTime + "ms)"' +
+                    '});' +
+                    'postMessage({' +
+                        '"type" : "done",' +
+                        '"data" : result,' +
+                        '"time" : totalTime' +
+                    '});' +
+                '}};' +
+                'postMessage({' +
+                    '"type" : "ready"' +
+                '});'],
+    {
+        type: 'application/javascript'
+    }));
+
+    var worker = new Worker(blob);
+    
+    URL.revokeObjectURL(blob);
+    return worker;
+}
+function PostBlob(blob) {
+    
+    document.getElementById("dl-modal-title").innerHTML = "All done, ready for download.";
+    document.getElementById("dl-modal-status").innerHTML = "";
+    document.getElementById("dl-modal-message").innerHTML = "";
+    document.getElementById("dl-dismiss-button").style.display = "inline";
+    document.getElementById("dl-ready-div").innerHTML = '<a href="' + URL.createObjectURL(blob) + 
+        '" target="_blank" download="' + "video" + '.mp4"><button type="button" class="btn btn-primary">Download</button></a>';
+    document.getElementById("dl-ready-div").setAttribute('contenteditable', 'false');
+}
+function log(message) {
+    console.log(message);
+}
+function dataURItoBlob(dataURI) {
+    // convert base64 to raw binary data held in a string
+    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+    var byteString = atob(dataURI.split(',')[1]);
+
+    // separate out the mime component
+    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+    // write the bytes of the string to an ArrayBuffer
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+
+    // write the ArrayBuffer to a blob, and you're done
+    var blob = new Blob([ab], {type: mimeString});
+    return blob;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // RECORDS
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+/*
 var recCanvas;
 var recCtx;
 
@@ -1162,7 +1633,7 @@ var playedRecord;
 var recPlayedID;
 
 var recAudio;
-var playing = false;
+
 var record;
 var recordsNum = 0;
 
@@ -1170,8 +1641,7 @@ var recRandAngle;
 var recRandNums;
 
 var download = false;
-var encoder;
-var encoderOutput;
+
 var dlUrl;
 var images = [];
 
@@ -1197,7 +1667,7 @@ var animate = function () {
     // The calculations required for the step function
     var start = new Date().getTime();
     var iMax = record.actions.length;
-    console.log(iMax);
+    
     var i = iSaved;
 
     var step = function() {
@@ -1251,7 +1721,7 @@ var animate = function () {
                 recorder.stop(function(blob) {
                     convertStreams(blob,aBlob);
                     //document.getElementById("vid").src = URL.createObjectURL(blob);
-                });*/
+                });
             }
         }
         
@@ -1332,198 +1802,6 @@ function dlRecord(key) {
     $('#download-popup').modal('show');
     socket.emit('get-record', { id: key });
 }
-
-
-
-
-
-
-
-
-
-
-//
-// Functions for encoding two seperate sources: canvas recording(webm) and audio into mp4 container -------------------------------------------
-//
-
-var worker;
-var workerPath = 'https://4dbefa02675a4cdb7fc25d009516b060a84a3b4b.googledrive.com/host/0B6GWd_dUUTT8WjhzNlloZmZtdzA/ffmpeg_asm.js';
-//var videoFile = !!navigator.mozGetUserMedia ? 'video.gif' : 'video.webm';
-
-function convertStreams(videoBlob, audioBlob) {
-    var vab;
-    var aab;
-    var buffersReady;
-    var workerReady;
-    var posted = false;
-
-    var fileReader1 = new FileReader();
-    fileReader1.onload = function() {
-        vab = this.result;
-
-        if (aab) buffersReady = true;
-
-        if (buffersReady && workerReady && !posted) postMessage();
-    };
-    var fileReader2 = new FileReader();
-    fileReader2.onload = function() {
-        aab = this.result;
-
-        if (vab) buffersReady = true;
-
-        if (buffersReady && workerReady && !posted) postMessage();
-    };
-
-    fileReader1.readAsArrayBuffer(videoBlob);
-    fileReader2.readAsArrayBuffer(audioBlob);
-
-    if (!worker) {
-        worker = processInWebWorker();
-    }
-
-    worker.onmessage = function(event) {
-        var message = event.data;
-        if (message.type == "ready") {
-            log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file has been loaded.');
-            workerReady = true;
-            if (buffersReady)
-                postMessage();
-        } else if (message.type == "stdout") {
-            log(message.data);
-        } else if (message.type == "start") {
-            log('<a href="'+ workerPath +'" download="ffmpeg-asm.js">ffmpeg-asm.js</a> file received ffmpeg command.');
-        } else if (message.type == "done") {
-            log(JSON.stringify(message));
-
-            var result = message.data[0];
-            log(JSON.stringify(result));
-
-            var blob = new Blob([result.data], {
-                type: 'video/mp4'
-            });
-
-            //log(JSON.stringify(blob));
-
-            PostBlob(blob);
-        }
-    };
-    var postMessage = function() {
-        posted = true;
-        worker.postMessage({
-            type: 'command',
-            arguments: [
-                '-i', 'video.webm', 
-                '-i', 'audio.wav', 
-                '-c:v', 'mpeg4', 
-                '-c:a', 'vorbis', 
-                '-b:v', '6400k', 
-                '-b:a', '4800k',
-                '-strict', 'experimental', 'output.mp4'
-            ],
-            files: [
-                {
-                    data: new Uint8Array(vab),
-                    name: "video.webm"
-                },
-                {
-                    data: new Uint8Array(aab),
-                    name: "audio.wav"
-                }
-            ]
-        });
-    }
-    
-}
-function processInWebWorker() {
-    var blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");' +
-            'var now = Date.now;' +
-            'function print(text) {' +
-                'postMessage({"type" : "stdout","data" : text});' +
-    
-            '};' +
-            'onmessage = function(event) {' +
-                'var message = event.data;' +
-                'if (message.type === "command") {' +
-                    'var Module = {' +
-                        'print: print,' +
-                        'printErr: print,' +
-                        'files: message.files || [],' +
-                        'arguments: message.arguments || [],' +
-                        //'TOTAL_MEMORY: message.TOTAL_MEMORY || false' +
-                        'TOTAL_MEMORY: 500000000' +
-                    '};' +
-                    'postMessage({' +
-                        '"type" : "start",' +
-                        '"data" : Module.arguments.join(" ")});' +
-                    'postMessage({"' +
-                        'type" : "stdout",' +
-                        '"data" : "Received command: " + Module.arguments.join(" ") + ((Module.TOTAL_MEMORY) ? ". Processing with " + Module.TOTAL_MEMORY + " bits." : "")' +
-                    '});' +
-                    'var time = now();' +
-                    'var result = ffmpeg_run(Module);' +
-                    'var totalTime = now() - time;' +
-                    'postMessage({' +
-                        '"type" : "stdout",' +
-                        '"data" : "Finished processing (took " + totalTime + "ms)"' +
-                    '});' +
-                    'postMessage({' +
-                        '"type" : "done",' +
-                        '"data" : result,' +
-                        '"time" : totalTime' +
-                    '});' +
-                '}};' +
-                'postMessage({' +
-                    '"type" : "ready"' +
-                '});'],
-    {
-        type: 'application/javascript'
-    }));
-
-    var worker = new Worker(blob);
-    URL.revokeObjectURL(blob);
-    return worker;
-}
-function PostBlob(blob) {
-    document.getElementById("dl-modal-title").innerHTML = "All done, ready for download.";
-    document.getElementById("dl-modal-status").innerHTML = "";
-    document.getElementById("dl-modal-message").innerHTML = "";
-    document.getElementById("dl-dismiss-button").style.display = "inline";
-    document.getElementById("dl-ready-div").innerHTML = '<a href="' + URL.createObjectURL(blob) + 
-        '" target="_blank" download="' + record.name + '.mp4"><button type="button" class="btn btn-primary">Download</button></a>';
-    document.getElementById("dl-ready-div").setAttribute('contenteditable', 'false');
-}
-function log(message) {
-    console.log(message);
-}
-function dataURItoBlob(dataURI) {
-    // convert base64 to raw binary data held in a string
-    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
-    var byteString = atob(dataURI.split(',')[1]);
-
-    // separate out the mime component
-    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-
-    // write the bytes of the string to an ArrayBuffer
-    var ab = new ArrayBuffer(byteString.length);
-    var ia = new Uint8Array(ab);
-    for (var i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-
-    // write the ArrayBuffer to a blob, and you're done
-    var blob = new Blob([ab], {type: mimeString});
-    return blob;
-}
-
-
-
-
-
-
-
-
-
-
 
 
 var sprayNum = 0;
@@ -1784,7 +2062,23 @@ function recDraw(xC,yC,tool,color,size,angle,clicked) {
         recCtx.fill();
         
     }
-}
+}*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 $(document).ready(function() {
@@ -1836,7 +2130,7 @@ $(document).ready(function() {
         for(var i = 0; i < data.names.length; i++) {
             var name = data.names[i];
             document.getElementById('music-list').innerHTML = document.getElementById('music-list').innerHTML + 
-                '<li class="list-group-item">' + name + '</li>';
+                '<li class="list-group-item" value="' + i + '" onclick="songClicked(this.value)">' + name + '</li>';
             document.getElementById('music-picker').innerHTML = document.getElementById('music-picker').innerHTML + 
                 '<li class="list-group-item m-picker" id="music' + i + '" onclick="selectMusic(this.id)">' + name + '</li>';
             document.getElementById('solo-music-picker').innerHTML = document.getElementById('solo-music-picker').innerHTML + 
@@ -1948,7 +2242,6 @@ $(document).ready(function() {
     });
     
     socket.on('canvas-init', function (data) {
-        
         document.getElementById("main-live-session").style.display = "none";
         document.getElementById("main-live-canvas").style.display = "block";
         
@@ -1997,8 +2290,8 @@ $(document).ready(function() {
         
         pickerCanvas = document.getElementById('color-picker-canvas');
         
-        pickerCanvas.width = 256;
-        pickerCanvas.height = 560;
+        pickerCanvas.width = 440;
+        pickerCanvas.height = 720;
         
         var context = pickerCanvas.getContext('2d');
         var imageObj = new Image();
@@ -2006,7 +2299,7 @@ $(document).ready(function() {
         imageObj.onload = function() {
             context.drawImage(imageObj, 0, 0);
             context.crossOrigin = "Anonymous";
-            imageData = context.getImageData(0,0,256,560);
+            imageData = context.getImageData(0,0,440,720);
         };
         imageObj.crossOrigin="anonymous";
         imageObj.src = '/images/colorpallete.jpg';
@@ -2028,7 +2321,7 @@ $(document).ready(function() {
         
         // Gray shades for brightness column
         
-        var brightnessCol = document.getElementById('brightness-column');
+        var brightnessCol = document.getElementById('brightness-row');
         var brElements = brightnessCol.childNodes;
         for (var i = 0; i < 13; i++) {
             brElements[(i*2)+1].style.backgroundColor = "hsl(0,0%," + (i/12)*100 + "%)";
@@ -2118,7 +2411,7 @@ $(document).ready(function() {
             iSaved = 0;
             currTimeSaved = 0;
             
-            encoder = new Whammy.Video(15); 
+            //encoder = new Whammy.Video(10);
             
             document.getElementById("dl-modal-status").innerHTML = "Started recording canvas";
             
@@ -2141,19 +2434,71 @@ $(document).ready(function() {
     
     socket.on('solo-init-res', function (data) {
         randNums = data.randNums;
-        randAngle = data.randAngle;
+        //randAngle = data.randAngle;
         
+        rawAudio = data.audio;
+        console.log(rawAudio);
         audio = new Audio(data.audio);
         
         audio.addEventListener('loadedmetadata', function() {
             $('#loading-popup').modal('hide');
-            document.getElementById("play-button").disabled = false;
+            var allMinutes = Math.floor(audio.duration / 60);
+            var allSeconds = Math.floor(audio.duration - allMinutes * 60);
+            document.getElementById("time-indicator").innerHTML = "<b>0:00 / " + allMinutes + ":" + ("0" + allSeconds).slice(-2) + "</b>";
+            audio.volume = 0.5;
+            //document.getElementById("play-button").disabled = false;
         });
     });
+    
+    /*socket.on('song-data-res', function (data) {
+       
+       var player = document.getElementById('audio-player');
+       player.src = data.audio;
+        
+    });*/
+    
+    
+    $("#bgColorButton").spectrum({
+        color: bgColor,
+        showButtons: false
+    });
+    $("#bgColorButton").on('move.spectrum', function(e, color) {
+        //textCtx.fillStyle = color.toHexString();
+        //textCtx.fillRect(0,0,1280,720);
+        bgColor = color.toHexString();
+        redrawWords();
+        if (word != "|") textCtx.fillText(word, textX, textY);
+    });
+    $("#textColorButton").spectrum({
+        color: textColor,
+        showButtons: false
+    });
+    $("#textColorButton").on('move.spectrum', function(e, color) {
+        textCtx.fillStyle = color.toHexString();
+        textColor = color.toHexString();
+    });
+    $('#text-borders').change(function() {
+        if($(this).is(":checked")) {
+            txtBorder = true;
+            redrawWords();
+        }
+        else {
+            txtBorder = false;
+            redrawWords();
+        }
+        
+    });
+    
+    $('body').bind('contextmenu', function(e){
+        return false;
+    }); 
+    $('#audio-stamp-canvas').bind('contextmenu', function(e){
+        return false;
+    }); 
 });
 
-$( window ).unload(function() {
+/*$( window ).unload(function() {
     if (mySessionID) {
         socket.emit('leaving', { sessionID: mySessionID });
     }
-});
+});*/

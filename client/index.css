@@ -1,3 +1,4 @@
+
 .form-control-label {
     margin-bottom: 7px;
     margin-top: 7px;
@@ -69,130 +70,173 @@
 /*
     CANVAS CSS -----------------------------------------------------------------
 */
-#canvas-header {
-    height: 40px;
+#progBar-div {
+    float: left;
+    margin-bottom: 0px;
+    margin-right: 20px;
+    width: 100%;
+    height: 30px;
+    text-align: center;
 }
+#progBar {
+    cursor: text;
+}
+#audio-indicator {
+    height: 30px;
+}
+#audio-stamp-canvas {
+    width: 100%;
+    height: 20px;
+    border: solid 1px black;
+    border-bottom: none;
+    margin-bottom: -5px;
+}
+#layers-wrapper {
+    display: table;
+    table-layout: fixed;
+    width: 450px;
+    float: right;
+    height: 34px;
+    background-color: white;
+    text-align: center;
+}
+#layers-wrapper div {
+    display: table-cell;
+    height: 100%;
+    border: 1px solid #000000;
+    font-size: 20px;
+    color: #000000;
+}
+
 #canv {
     border: 1px solid #000000;
-    margin-left: 20px;
+    margin-left: 15px;
     float: left;
+    user-select: none;
 }
 #left-panel {
-    width: 200px;
+    width: 130px;
     float: left;
-    margin-left: 20px;
+    user-select: none;
 }
 #tool-column {
-    float: left;
-    width: 100px;
-}
-#thickness-and-brightness {
-    float: right;
+    width: 60px;
+    height: 700px;
 }
 #thickness-column {
-    width: 40px;
+    float: left;
+    width: 60px;
+    margin-right: 10px;
 }
-#brightness-column {
-    width: 50px;
+#audio-row {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    margin-left: 20px;
+    width: 1425px;
+    user-select: none;
 }
-.tool-div {
-    width: 100%;
-    height: 45px;
+#top-row {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 0;
+    /*margin-left: 20px;
+    width: 1425px;*/
+    user-select: none;
 }
-.tool-number {
-    width: 40px;
-    height: 45px;
-    background-color: white;
+#time-indicator {
+    z-index: 1000;
+    position: absolute;
+    left: 48%;
+    padding-top:4px;
+    user-select: none;
+}
+#vol-control {
+    width: 130px;
+    float: left;
+    margin-top: 7px;
+    display: inline;
+}
+#brightness-row {
+    margin-left: 15px;
+    display: inline;
+    float: left;
+}
+#solo-row {
+    display: none;
+    float: left;
 }
 #tool1 {
-    background-image: url('images/icons/hLine-icon.jpg');
+    background-image: url('images/icons/brush.jpg');
 }
 #tool2 {
-    background-image: url('images/icons/rLine-icon.jpg');
+    background-image: url('images/icons/rLine.jpg');
 }
 #tool3 {
-    background-image: url('images/icons/sprayLine-icon.jpg');
+    background-image: url('images/icons/spray.jpg');
 }
 #tool4 {
-    background-image: url('images/icons/spray-icon.jpg');
+    background-image: url('images/icons/centeredSpray.jpg');
 }
 #tool5 {
-    background-image: url('images/icons/brushInc-icon.jpg');
+    background-image: url('images/icons/softCircle.jpg');
 }
 #tool6 {
-    background-image: url('images/icons/brushIncSprayed-icon.jpg');
-}
-#tool7 {
-    background-image: url('images/icons/brushDec-icon.jpg');
-}
-#tool8 {
-    background-image: url('images/icons/brushDecSprayed-icon.jpg');
-}
-#tool9 {
-    background-image: url('images/icons/fullCircleSprayed-icon.jpg');
-}
-#tool10 {
-    background-image: url('images/icons/stripedCircleSprayed-icon.jpg');
-}
-#tool11 {
-    background-image: url('images/icons/blackedSpray-icon.jpg');
-}
-#tool12 {
-    background-image: url('images/icons/blackedSpraySquare-icon.jpg');
-}
-#tool13 {
-    background-image: url('images/icons/brush-icon.jpg');
+    background-image: url('images/icons/softCircle.jpg');
+    margin-bottom: 0;
 }
 .tool {
     width: 100%;
-    height: 45px;
+    height: 15.5%;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border: 2px solid #DDDDDD;
+    background-size: 100% 100%;
 }
-.tool:hover {
+/*.tool:hover {
     background-position: 0px;
 }
 .tool:focus {
     background-position: 0px;
     outline: none;
-}
+}*/
 .thickness-class {
     width: 100%;
-    height: 30px;
+    height: 35px;
     text-align: center;
     border: 1px solid #555555;
     padding-top: 3px;
     cursor: pointer;
 }
 .brightness-class {
-    width: 100%;
-    height: 48.5px;
-    text-align: center;
+    width: 80px;
+    height: 34px;
+    margin-right: 7px;
     border: 1px solid #555555;
-    padding-top: 14px;
     cursor: pointer;
+    display: inline-block;
+    *display: inline;
+    vertical-align: top;
 }
 #right-panel {
-    float: left;
-    margin-left: 20px;
+    /*position: absolute;
+    margin-left: 1460px;*/
+    float: right;
+    top: 10px;
+    width: 450px;
+    height: 710px;
+    user-select: none;
 }
 #color-picker-canvas {
-    width: 256px;
-    height: 560px;
+    width: 100%;
+    height: 720px;
     cursor: url(/images/picker.cur), pointer;
 }
 #color-picker-data {
-    margin-top: 5px;
-}
-#rgb-values {
-    width: 256px;
-    height: 30px;
-}
-.rgb-input {
-    width: 50px !important;
+    margin-top: 19px;
 }
 #show-color {
     border: 1px solid #000000;
     background-color: black;
-    margin-top: 5px;
     height: 20px;
 }
 
@@ -201,37 +245,63 @@
     height: 30px;
 }
 
-#play-button {
-    float: left;
-    margin-left: 15px;
-    margin-right: 10px;
-    height: 30px;
-}
 #mute-button {
     float: left;
     height: 30px;
 }
-#progBar-div {
-    float: left;
-    margin-bottom: 0px;
+
+/*
+    TEXT EDITOR CSS ------------------------------------------------------------------------
+*/
+
+#text-add-button {
+    float: right;
+    display: inline;
     margin-right: 10px;
-    width: 85%;
+    width: 40px;
     height: 30px;
+    border: 2px solid #FF0000;
 }
-#audio-indicator {
+#text-remove-button {
+    float: right;
+    display: inline;
+    margin-right: 10px;
+    width: 40px;
     height: 30px;
 }
 
-/*
-    SOLO CSS ------------------------------------------------------------------------
-*/
+#textChangeDiv {
+    float: left;
+    border: 2px solid #00AA00;
+    width: 30%;
+}
+.textSelect {
+    width: 100%;
+    font-size: 23px;
+}
+#arial-option {font-family: 'Arial', sans-serif;}
+#verdana-option {font-family: 'Verdana', sans-serif;}
+#calibri-option {font-family: 'Calibri', sans-serif;}
+#tnr-option {font-family: 'Times New Roman', Times, serif;}
+#georgia-option {font-family: 'Georgia', serif;}
+#cn-option {font-family: 'Courier New', monospace;}
+#lc-option {font-family: 'Lucida Console', monospace;}
+
+
+input#text-borders {
+  position: relative;
+  top: 2px;
+  *overflow: hidden;
+}
+
+/*optgroup { font-family: 'Times New Roman', sans-serif; }*/
 
 
 /*
     RECORDS CSS ---------------------------------------------------------------------
 */
 
-#rec-container {
+/*#rec-container {
     margin-left: 50px;
 }
 #rec-header-text {
@@ -258,8 +328,8 @@
     float: left;
 }
 #record-player {
-    /*background-color: red !important;*/
-}
+    background-color: red !important;
+}*/
 .rec-items {
     height: 55px;
 }
@@ -293,5 +363,17 @@
     width: 100%;
     height: 60px;
     background-color: #f5f5f5;
+}
+
+/*
+    PATENT CODE ---------------------------------------------------------------------
+*/
+
+#patent-code {
+    position: absolute;
+    left: 20px;
+    top: 823px;
+    user-select: none;
+
 }
 

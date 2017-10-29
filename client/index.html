@@ -7,9 +7,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         <!-- BOOTSTRAP Latest compiled and minified CSS -->
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" 
+            integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
         <!-- Optional theme -->
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" 
+            integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
         <!-- jQuery library -->
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
         <!-- Latest compiled and minified JavaScript -->
@@ -18,12 +20,16 @@
         <link rel="stylesheet" href="index.css">
         
         <!-- BOOTSTRAP SELECT Latest compiled and minified CSS -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/css/bootstrap-select.min.css">
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.min.css">
         <!-- Latest compiled and minified JavaScript -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/js/bootstrap-select.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.min.js"></script>
+        
+        <!-- SPECTRUM for button color pickers -->
+        <script src="spectrum/spectrum.js"></script>
+        <link rel="stylesheet" href="spectrum/spectrum.css" />
         
         <!-- FFmpeg converter -->
-        <script src="https://4dbefa02675a4cdb7fc25d009516b060a84a3b4b.googledrive.com/host/0B6GWd_dUUTT8WjhzNlloZmZtdzA/ffmpeg_asm.js" async> </script>
+        <!-- <script src="https://4dbefa02675a4cdb7fc25d009516b060a84a3b4b.googledrive.com/host/0B6GWd_dUUTT8WjhzNlloZmZtdzA/ffmpeg_asm.js" async> </script> -->
         
         <!-- favicon -->
         <link rel="shortcut icon" href="/images/favicon.ico" />
@@ -157,164 +163,87 @@
             </div>
         </div>
             
-        <div id="main-live-canvas" style="display:none;">
+        <div id="main-live-canvas" style="display:none;padding-top:15px;" class="col-md-12">
             
-            <div id="canvas-header" class="page-header">
-                
-                <div class="col-md-12">
-                    <div class="col-md-6">
-                        <button id="play-button" type="button" class="play btn btn-default" onclick="playButtonPressed()">
-                            <span id="play-icon" class="glyphicon glyphicon-play"></span>
-                        </button>
-                        <div id="progBar-div" class="progress">
-                            <div id="progBar" class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                        <button id="mute-button" type="button" class="btn btn-default" onclick="muteButtonPressed()">
-                            <span id="mute-icon" class="glyphicon glyphicon-volume-up"></span>
-                        </button>
-                    </div>
-                    <div id="solo-bar" class="col-md-6" style="display:none">
-                        <button id="undo-button" type="button" class="btn btn-primary" style="float:left;margin-right:20px;display:inline;" onclick="undo()">
-                            <span class="glyphicon glyphicon-arrow-left"></span>
-                        </button>
-                        <h5 style="display:inline;"><b>Layers:</b></h5>
-                        <select id="layerSel" style="display:inline;width:70px;margin-right:10px;" onchange="selectedLayer()" class="form-control">
-                        </select>
-                        <button id="new-layer-button" type="button" class="btn btn-primary" style="display:inline;" onclick="newLayer()">
-                            <span class="glyphicon glyphicon-plus"></span>
-                        </button>
-                        <div id="visible-checkbox-div" onclick="layerVisibilityChanged()" class="checkbox" disabled="true" style="display:inline">
-                            <label style="margin-left:10px;margin-right:10px;"><h5><input id="visible-checkbox" type="checkbox" value=""><b>Visible</b></h5></label>
-                        </div>
-                        <button id="finish-solo-button" type="button" class="btn btn-primary" style="display:inline;" onclick="finishSolo()">
-                            <span class="glyphicon glyphicon-save"></span>
-                        </button>
-                        
-                    </div>
+            <div class="col-md-12" style="padding:0;">
+                <canvas id="audio-stamp-canvas"></canvas>
+                <div id="progBar-div" class="progress">
+                    <div id="time-indicator"><b>0:00 / 0:00</b></div>
+                    <div id="progBar" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
-            <div>
-                <img src="/images/tool-templates.jpg" style="margin-bottom:10px;margin-left:20px;"/>
+        
+            <div id="top-row" class="col-md-12">
+                <input id="vol-control" type="range" min="0" max="100" step="1" oninput="setVolume(this.value)" onchange="setVolume(this.value)"></input>
+                <div id="brightness-row" role="group">
+                    <div id="bright1" class="brightness-class" onclick="bright1()"></div>
+                    <div id="bright2" class="brightness-class" onclick="bright2()"></div>
+                    <div id="bright3" class="brightness-class" onclick="bright3()"></div>
+                    <div id="bright4" class="brightness-class" onclick="bright4()"></div>
+                    <div id="bright5" class="brightness-class" onclick="bright5()"></div>
+                    <div id="bright6" class="brightness-class" onclick="bright6()"></div>
+                    <div id="bright7" class="brightness-class" onclick="bright7()"></div>
+                    <div id="bright8" class="brightness-class" onclick="bright8()"></div>
+                    <div id="bright9" class="brightness-class" onclick="bright9()"></div>
+                    <div id="bright10" class="brightness-class" onclick="bright10()"></div>
+                    <div id="bright11" class="brightness-class" onclick="bright11()"></div>
+                    <div id="bright12" class="brightness-class" onclick="bright12()"></div>
+                    <div id="bright13" class="brightness-class" onclick="bright13()"></div>
+                </div>
+                <div id="solo-row">
+                    <button id="new-layer-button" type="button" class="btn btn-primary" style="display:inline;margin-left:10px;" onclick="newLayer()">
+                        <span class="glyphicon glyphicon-plus"></span>
+                    </button>
+                    <button id="finish-solo-button" type="button" class="btn btn-primary" style="display:inline;margin-left:5px;" onclick="finishSolo()">
+                        <span class="glyphicon glyphicon-save"></span>
+                    </button>
+                </div>
+                <div id="layers-wrapper">
+                    <div>1</div>
+                </div>
             </div>
+        
             <div id="left-panel">
-                <div id="tool-column" class="btn-group-vertical" role="group">
-                    <div class="input-group tool-div">
-                        <span id="toolLab1" class="input-group-addon tool-number" id="basic-addon1" style="background-color:black;color:white;"><b>A</b></span>
-                        <button id="tool1" onclick="tool1()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab2" class="input-group-addon tool-number" id="basic-addon1"><b>B</b></span>
-                        <button id="tool2" onclick="tool2()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab3" class="input-group-addon tool-number" id="basic-addon1"><b>C</b></span>
-                        <button id="tool3" onclick="tool3()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab4" class="input-group-addon tool-number" id="basic-addon1"><b>D</b></span>
-                        <button id="tool4" onclick="tool4()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab5" class="input-group-addon tool-number" id="basic-addon1"><b>E</b></span>
-                        <button id="tool5" onclick="tool5()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab6" class="input-group-addon tool-number" id="basic-addon1"><b>F</b></span>
-                        <button id="tool6" onclick="tool6()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab7" class="input-group-addon tool-number" id="basic-addon1"><b>G</b></span>
-                        <button id="tool7" onclick="tool7()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab8" class="input-group-addon tool-number" id="basic-addon1"><b>H</b></span>
-                        <button id="tool8" onclick="tool8()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab9" class="input-group-addon tool-number" id="basic-addon1"><b>I</b></span>
-                        <button id="tool9" onclick="tool9()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab10" class="input-group-addon tool-number" id="basic-addon1"><b>J</b></span>
-                        <button id="tool10" onclick="tool10()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab11" class="input-group-addon tool-number" id="basic-addon1"><b>K</b></span>
-                        <button id="tool11" onclick="tool11()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab12" class="input-group-addon tool-number" id="basic-addon1"><b>L</b></span>
-                        <button id="tool12" onclick="tool12()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab13" class="input-group-addon tool-number" id="basic-addon1"><b>M</b></span>
-                        <button id="tool13" onclick="tool13()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
-                    <div class="input-group tool-div">
-                        <span id="toolLab14" class="input-group-addon tool-number" id="basic-addon1"><b>N</b></span>
-                        <button id="tool14" onclick="tool14()" type="button" class="btn btn-default tool" aria-describedby="basic-addon1"></button>
-                    </div>
+                
+                <div id="thickness-column" class="btn-group-vertical" role="group">
+                    <div id="thick1" class="thickness-class" onclick="thick1()" style="background-color:black;color:white;"><b>1</b></div>
+                    <div id="thick2" class="thickness-class" onclick="thick2()"><b>2</b></div>
+                    <div id="thick3" class="thickness-class" onclick="thick3()"><b>3</b></div>
+                    <div id="thick4" class="thickness-class" onclick="thick4()"><b>4</b></div>
+                    <div id="thick5" class="thickness-class" onclick="thick5()"><b>5</b></div>
+                    <div id="thick6" class="thickness-class" onclick="thick6()"><b>6</b></div>
+                    <div id="thick7" class="thickness-class" onclick="thick7()"><b>7</b></div>
+                    <div id="thick8" class="thickness-class" onclick="thick8()"><b>8</b></div>
+                    <div id="thick9" class="thickness-class" onclick="thick9()"><b>9</b></div>
+                    <div id="thick10" class="thickness-class" onclick="thick10()"><b>10</b></div>
+                    <div id="thick11" class="thickness-class" onclick="thick11()"><b>11</b></div>
+                    <div id="thick12" class="thickness-class" onclick="thick12()"><b>12</b></div>
+                    <div id="thick13" class="thickness-class" onclick="thick13()"><b>13</b></div>
+                    <div id="thick14" class="thickness-class" onclick="thick14()"><b>14</b></div>
+                    <div id="thick15" class="thickness-class" onclick="thick15()"><b>15</b></div>
+                    <div id="thick16" class="thickness-class" onclick="thick16()"><b>16</b></div>
+                    <div id="thick17" class="thickness-class" onclick="thick17()"><b>17</b></div>
+                    <div id="thick18" class="thickness-class" onclick="thick18()"><b>18</b></div>
+                    <div id="thick19" class="thickness-class" onclick="thick19()"><b>19</b></div>
+                    <div id="thick20" class="thickness-class" onclick="thick20()"><b>20</b></div>
                 </div>
-                <div id="thickness-and-brightness">
-                    <div id="thickness-column" class="btn-group-vertical" role="group">
-                        <div id="thick1" class="thickness-class" onclick="thick1()" style="background-color:black;color:white;"><b>1</b></div>
-                        <div id="thick2" class="thickness-class" onclick="thick2()"><b>2</b></div>
-                        <div id="thick3" class="thickness-class" onclick="thick3()"><b>3</b></div>
-                        <div id="thick4" class="thickness-class" onclick="thick4()"><b>4</b></div>
-                        <div id="thick5" class="thickness-class" onclick="thick5()"><b>5</b></div>
-                        <div id="thick6" class="thickness-class" onclick="thick6()"><b>6</b></div>
-                        <div id="thick7" class="thickness-class" onclick="thick7()"><b>7</b></div>
-                        <div id="thick8" class="thickness-class" onclick="thick8()"><b>8</b></div>
-                        <div id="thick9" class="thickness-class" onclick="thick9()"><b>9</b></div>
-                        <div id="thick10" class="thickness-class" onclick="thick10()"><b>10</b></div>
-                        <div id="thick11" class="thickness-class" onclick="thick11()"><b>11</b></div>
-                        <div id="thick12" class="thickness-class" onclick="thick12()"><b>12</b></div>
-                        <div id="thick13" class="thickness-class" onclick="thick13()"><b>13</b></div>
-                        <div id="thick14" class="thickness-class" onclick="thick14()"><b>14</b></div>
-                        <div id="thick15" class="thickness-class" onclick="thick15()"><b>15</b></div>
-                        <div id="thick16" class="thickness-class" onclick="thick16()"><b>16</b></div>
-                        <div id="thick17" class="thickness-class" onclick="thick17()"><b>17</b></div>
-                        <div id="thick18" class="thickness-class" onclick="thick18()"><b>18</b></div>
-                        <div id="thick19" class="thickness-class" onclick="thick19()"><b>19</b></div>
-                        <div id="thick20" class="thickness-class" onclick="thick20()"><b>20</b></div>
-                        <div id="thick21" class="thickness-class" onclick="thick21()"><b>21</b></div>
-                    </div>
-                    <div id="brightness-column" class="btn-group-vertical" role="group">
-                        <div id="bright1" class="brightness-class" onclick="bright1()" style="color:white;"><b>1</b></div>
-                        <div id="bright2" class="brightness-class" onclick="bright2()" style="color:white;"><b>2</b></div>
-                        <div id="bright3" class="brightness-class" onclick="bright3()" style="color:white;"><b>3</b></div>
-                        <div id="bright4" class="brightness-class" onclick="bright4()" style="color:white;"><b>4</b></div>
-                        <div id="bright5" class="brightness-class" onclick="bright5()" style="color:white;"><b>5</b></div>
-                        <div id="bright6" class="brightness-class" onclick="bright6()" style="color:white;"><b>6</b></div>
-                        <div id="bright7" class="brightness-class" onclick="bright7()"><b>7</b></div>
-                        <div id="bright8" class="brightness-class" onclick="bright8()"><b>8</b></div>
-                        <div id="bright9" class="brightness-class" onclick="bright9()"><b>9</b></div>
-                        <div id="bright10" class="brightness-class" onclick="bright10()"><b>10</b></div>
-                        <div id="bright11" class="brightness-class" onclick="bright11()"><b>11</b></div>
-                        <div id="bright12" class="brightness-class" onclick="bright12()"><b>12</b></div>
-                        <div id="bright13" class="brightness-class" onclick="bright13()"><b>13</b></div>
-                    </div>
+                
+                <div id="tool-column" class="btn-group-vertical" role="group">
+                    <div id="tool1" class="tool" onclick="tool1()" style="background-color:black;color:white;"></div>
+                    <div id="tool2" class="tool" onclick="tool2()"></div>
+                    <div id="tool3" class="tool" onclick="tool3()"></div>
+                    <div id="tool4" class="tool" onclick="tool4()"></div>
+                    <div id="tool5" class="tool" onclick="tool5()"></div>
+                    <div id="tool6" class="tool" onclick="tool6()"></div>
                 </div>
             </div>
-      
+            <a id="patent-code" href="https://google.com/patents/WO1998029863A1?cl=en">WO1998029863A1</a>
             <canvas id="canv"></canvas>
             
             <div id="right-panel">
                 <canvas id="color-picker-canvas"></canvas>
-                <div id="color-picker-data">
-                    <div id="rgb-values" class="input-group">
-                        <span class="input-group-addon rgb-label" id="basic-addon1">R</span>
-                        <input id="red" value="0" type="text" maxlength="3" class="rgb-input form-control" onchange="rgbChanged()" aria-describedby="basic-addon1">
-                        <span class="input-group-addon rgb-label" id="basic-addon2">G</span>
-                        <input id="green" value="0" type="text" maxlength="3" class="rgb-input form-control" onchange="rgbChanged()" aria-describedby="basic-addon2">
-                        <span class="input-group-addon rgb-label" id="basic-addon3">B</span>
-                        <input id="blue" value="0" type="text" maxlength="3" class="rgb-input form-control" onchange="rgbChanged()" aria-describedby="basic-addon3">
-                    </div>
-                    <div id="show-color"></div>
-                    <button type="button" id="whole-pic-button" class="btn btn-primary" style="margin-top:10px;" onclick="spectate()">Whole Picture</button>
-                </div>
             </div>
-            
+            <video id="vidd"></video>
         </div>
         
         
@@ -401,48 +330,90 @@
             </div>
         </div>
         
-        <div id="solo-popup" class="modal fade bd-example-modal-sm" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-sm">
+        <div id="solo-popup" class="modal fade bd-example-modal-md" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-md">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h4 class="modal-title">New Solo Session</h4>
                     </div>
-                    <div class="modal-body" style="height:380px;">
-                        <div class="form-group">
-                            <label for="solo-name-input">Name</label>
-                            <input id="solo-name-input" type="text" autocomplete="off" class="form-control" onclick="clearText()"/>
-                        </div>
+                    <div class="modal-body" style="height:300px;overflow-y:auto;">
                         <div class="form-group">
                             <label for="solo-music-picker">Audio</label>
-                            <div style="height:100px;overflow-y:auto;">
+                            <div>
                                 <ul id="solo-music-picker" class="list-group">
                                 </ul>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="solo-bg-selector">Background</label>
-                            <select id="solo-bg-selector" class="selectpicker">
-                                <option value="1">Black</option>
-                                <option value="2">White</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="solo-size-selector">Resolution</label>
-                            <select id="solo-size-selector" class="selectpicker">
-                                <option value="1">640 x 480 (4:3)</option>
-                                <option value="2">1024 x 768 (4:3)</option>
-                                <option value="3">640 x 360 (16:9)</option>
-                                <option value="4">960 x 540 (16:9)</option>
-                                <option value="5">1280 x 720 (16:9)</option>
-                            </select>
-                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button id="start-solo-session-button" type="button" class="btn btn-primary" disabled="true" onclick="startSoloSession()">Start</button>
+                        <button type="button" class="btn btn-default" onclick="startSoloSession(true)">Brez Glasbe</button>
+                        <button id="start-text-editor-button" type="button" class="btn btn-primary" disabled="true" onclick="startTextEditor()">Naprej</button>
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <div id="text-popup" class="modal fade bd-example-modal-lg" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true" style="width:1312px;margin:auto;">
+                <div class="modal-content">
+                    <div id="text-popup-header" class="modal-header">
+                        
+                        <div id="textChangeDiv">
+                            <input type='text' id="textColorButton" />
+                            <div style="width:61.58%;float:left;margin-right:10px;">
+                                <select id="textFontDropdown" class="textSelect">
+                                    <option id="arial-option" value="1">Arial</option>
+                                    <option id="verdana-option" value="2">Verdana</option>
+                                    <option id="calibri-option" value="3">Calibri</option>
+                                    <option id="tnr-option" value="4">Times New Roman</option>
+                                    <option id="georgia-option" value="5">Georgia</option>
+                                    <option id="cn-option" value="6">Courier New</option>
+                                    <option id="lc-option" value="7">Lucida Console</option>
+                                    <option id="brush-option" value="8">Čopič</option>
+                                </select>
+                            </div>
+                            <div style="width:20%;float:left;margin-right:10px;">
+                                <select id="textSizeDropdown" class="textSelect">
+                                    <option value="1">16</option>
+                                    <option value="2">24</option>
+                                    <option value="3">32</option>
+                                    <option value="4">40</option>
+                                    <option value="5">48</option>
+                                    <option value="5">60</option>
+                                    <option value="5">75</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-left:10px;float:left;padding-top:5px;">
+                            <label id="checkbox-label"><input type="checkbox" id="text-borders" /> Mreža</label>
+                        </div>
+                        
+                        <div style="width:30%;float:right;">
+                            <select id="textSelectDropdown" class="textSelect">
+                            </select>
+                        </div>
+                        
+                        <button id="text-remove-button" type="button" onclick="textRemove()">
+                            <span class="glyphicon glyphicon-remove"></span>
+                        </button>
+                        
+                        <button id="text-add-button" type="button" disabled="true" onclick="textAdd()">
+                            <span class="glyphicon glyphicon-plus-sign"></span>
+                        </button>
+                        <div style="float:right;margin-right:10px;">
+                            <input type='text' id="bgColorButton" />
+                        </div>
+                        
+                    </div>
+                    <div id="text-popup-body" class="modal-body">
+                        <canvas id="text-canvas" style="width:1280px;height:720px;" tabindex="1"></canvas>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Zapri</button>
+                        <button id="start-solo-session-button" type="button" class="btn btn-primary" onclick="startSoloSession(false)">Začni</button>
+                    </div>
+                </div>
         </div>
         
         <footer id="footer" class="footer">
